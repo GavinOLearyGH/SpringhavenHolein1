@@ -30,12 +30,12 @@ function height(x,z){
  const approach=.20*Math.sin(z*.025)+.14*Math.sin(x*.052);
  // Green shelf rises behind the pond-side retaining wall, not across the full fairway.
  const front=wallFrontZ(x);
- const shelf=4.1/(1+Math.exp(-(z-front)*.68));
+ const shelf=3.0/(1+Math.exp(-(z-front)*.15));
  const leftDrop=1/(1+Math.exp((x+11)*.24));
- const basin=pondFootprint(x,z)?-2.4:0;
+ const basin=0; // Continuous terrain: avoid vertical tears at the pond polygon boundary.
  return approach+shelf*(1-.75*leftDrop)+Math.max(0,z/greenZ)*.25+basin;
 }
-const pondSurfaceY=height(-28,pondZ)+.75;
+const pondSurfaceY=height(-28,pondZ)+.22;
 const wallTopY=x=>height(x,wallFrontZ(x))+.15;
 function mesh(geometry,mat,x=0,y=0,z=0){let m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);m.receiveShadow=true;scene.add(m);return m}
 let terrain=new THREE.PlaneGeometry(350,Math.max(480,greenZ+260),65,95);terrain.rotateX(-Math.PI/2);let pos=terrain.attributes.position;for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i)+greenZ*.55;pos.setY(i,height(x,z))}terrain.computeVertexNormals();mesh(terrain,rough,0,0,greenZ*.55);
@@ -48,7 +48,7 @@ function surfaceMesh(poly,mat,lift=.08){const shape=new THREE.Shape();poly.forEa
  for(let i=0;i<arr.count;i+=3){let p=[];for(let j=0;j<3;j++)p.push([arr.getX(i+j),0,arr.getZ(i+j)]);tri(...p,3)}
  const out=new THREE.BufferGeometry();const flat=[];for(let i=0;i<verts.length;i+=3){let x=verts[i],z=verts[i+2];flat.push(x,height(x,z)+lift,z)}out.setAttribute('position',new THREE.Float32BufferAttribute(flat,3));out.computeVertexNormals();return mesh(out,mat)}
 function oval(cx,cz,rx,rz,n=64){return Array.from({length:n},(_,i)=>{let a=i*2*Math.PI/n;return[cx+rx*Math.cos(a),cz+rz*Math.sin(a)]})}
-surfaceMesh(oval(-2,greenZ*.43,42,greenZ*.52),grass,.10);
+// Omit the oversized fairway oval; it obscured the near bank of the pond.
 surfaceMesh(oval(greenX,greenCenterZ,27,22),fringe,.20);
 surfaceMesh(oval(greenX,greenCenterZ,23,18),green,.27);
 surfaceMesh(oval(39,greenZ+8,10,7),sand,.29);
@@ -58,7 +58,7 @@ const pondWaterMaterial=new THREE.MeshBasicMaterial({color:0x246e83,transparent:
 pond.material=pondWaterMaterial;
 // Recess water below approach level, but above excavated basin.
 const waterPositions=pond.geometry.attributes.position;for(let i=0;i<waterPositions.count;i++)waterPositions.setY(i,pondSurfaceY);pond.geometry.computeVertexNormals();
-const wallCurve=[];for(let i=0;i<=46;i++){let x=-13+i*1.03,z=wallFrontZ(x);wallCurve.push(new THREE.Vector3(x,wallTopY(x),z))}
+const wallCurve=[];for(let i=0;i<=46;i++){let x=-34+i*1.05,z=wallFrontZ(x);wallCurve.push(new THREE.Vector3(x,wallTopY(x),z))}
 const wallFace=material(0x99968b),wallCap=material(0xbab5a6);
 for(let i=0;i<46;i++){const p=wallCurve[i],q=wallCurve[i+1],dx=q.x-p.x,dz=q.z-p.z,len=Math.hypot(dx,dz);
  let block=mesh(new THREE.BoxGeometry(len+.12,4.4,1.5),wallFace,(p.x+q.x)/2,(p.y+q.y)/2-2.15,(p.z+q.z)/2);
@@ -85,7 +85,7 @@ const aimGroup=new THREE.Group();aimGroup.renderOrder=25;scene.add(aimGroup);
 function updateAim(lateral){
  while(aimGroup.children.length){const m=aimGroup.children[0];aimGroup.remove(m);m.geometry.dispose()}
  // Follow the actual initial launch vector. Chevrons stay in the foreground so they remain legible.
- const heading=Math.atan2(lateral,yard),forward=new THREE.Vector2(Math.sin(heading),Math.cos(heading)),side=new THREE.Vector2(forward.y,-forward.x);
+ const heading=Math.atan2(-lateral,yard),forward=new THREE.Vector2(Math.sin(heading),Math.cos(heading)),side=new THREE.Vector2(forward.y,-forward.x);
  function vertex(cx,cz,along,across){
    let x=cx+forward.x*along+side.x*across,z=cz+forward.y*along+side.y*across;
    return [x,height(x,z)+1.05,z]
@@ -116,18 +116,21 @@ $('shapeMinus').onclick=()=>{shape=Math.max(0,shape-1);choices()};$('shapePlus')
 // The hole uses a single right-handed world coordinate system.
 // Tee=(0,0), pond has negative X (left), green has positive X (right).
 // Never mirror the scene: physics, aim indicators and camera must share coordinates.
+// World X is left-handed relative to the tee-facing camera. Mirror only the scene visuals;
+// convert shot and aiming X identically, keeping collision geometry in world coordinates.
+scene.scale.x=-1;
 function setCamera(){
   const progress=phase==='flying'&&shot?clamp(shot.ball.z/greenZ,0,1):0;
   // Camera translates straight down the tee-to-pin axis. No lateral tracking.
-  const camZ=phase==='flying'&&shot?Math.max(-12,shot.ball.z-28):-12;
-  camera.position.set(0,10+progress*4,camZ);
+  const camZ=phase==='flying'&&shot?Math.max(-12,shot.ball.z-45):-12;
+  camera.position.set(0,12+progress*3,camZ);
   // Look forward in world +Z. Positive world X must stay screen-right.
-  camera.lookAt(0,3.0+progress*2,Math.max(greenZ*.90,camZ+45));
+  camera.lookAt(0,3.5+progress*2,Math.max(greenZ*.95,camZ+45));
 }
 function render(){requestAnimationFrame(render);if(animation)animation(performance.now());setCamera();renderer.render(scene,camera)}render();
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);const b=$('ballTarget');b.style.top=Math.round(innerHeight*.71)+'px'}addEventListener('resize',resize);resize();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),YD=.9144,MPH=.44704;
-function compute(power,aim){let profile={PW:[38.5,29,8200],'9i':[42,25,7600],'8i':[45,22,6900],'7i':[48.5,19,6200],'6i':[52,16,5500],'5i':[55,14,4800]}[club];let speed=profile[0]*power/100,angle=(profile[1]+(flight-1)*3.2)*Math.PI/180,heading=Math.atan2(aim,yard),spin=profile[2],axis=(shape-1)*.12;
+function compute(power,aim){let profile={PW:[38.5,29,8200],'9i':[42,25,7600],'8i':[45,22,6900],'7i':[48.5,19,6200],'6i':[52,16,5500],'5i':[55,14,4800]}[club];let speed=profile[0]*power/100,angle=(profile[1]+(flight-1)*3.2)*Math.PI/180,heading=Math.atan2(-aim,yard),spin=profile[2],axis=(shape-1)*.12;
 let p={x:0,y:0,z:0},v={x:speed*Math.cos(angle)*Math.sin(heading),y:speed*Math.sin(angle),z:speed*Math.cos(angle)*Math.cos(heading)},points=[{...p,t:0}],t=0,apex=0,land=null,dt=.008;
 function accel(q){let a={x:q.x-windX*MPH,y:q.y,z:q.z-windY*MPH},mag=Math.hypot(a.x,a.y,a.z)||1,ratio=.021335*(spin*2*Math.PI/60)/mag,cd=clamp(.24+.065*ratio,.22,.36),cl=clamp(.08+.42*ratio,.07,.32),factor=.5*1.225*Math.PI*.021335**2/.04593*mag,up={x:-a.x*a.y/mag**2,y:1-a.y*a.y/mag**2,z:-a.z*a.y/mag**2},ul=Math.hypot(up.x,up.y,up.z)||1,side={x:a.z/mag,y:0,z:-a.x/mag};return{x:-factor*cd*a.x+factor*cl*mag*(up.x/ul*Math.cos(axis)+side.x*Math.sin(axis)),y:-9.80665-factor*cd*a.y+factor*cl*mag*up.y/ul*Math.cos(axis),z:-factor*cd*a.z+factor*cl*mag*(up.z/ul*Math.cos(axis)+side.z*Math.sin(axis))}}
 for(let i=0;i<2200;i++){let a=accel(v),mid={x:v.x+a.x*dt/2,y:v.y+a.y*dt/2,z:v.z+a.z*dt/2},am=accel(mid);let next={x:p.x+mid.x*dt,y:p.y+mid.y*dt,z:p.z+mid.z*dt};v.x+=am.x*dt;v.y+=am.y*dt;v.z+=am.z*dt;t+=dt;apex=Math.max(apex,next.y);let ground=height(next.x,next.z);if(next.y<=Math.max(ground,pondFootprint(next.x,next.z)?pondSurfaceY:ground)&&t>.15){land={x:next.x,y:Math.max(ground,pondFootprint(next.x,next.z)?pondSurfaceY:ground),z:next.z,t,v:{...v}};points.push({...land});break}p=next;if(i%4===0)points.push({...p,t})}
@@ -159,7 +162,7 @@ let distance=Math.hypot(q.x-cupX,q.z-cupZ)/YD;return{points,rolling,land,water,d
 function launch(power,aim){
  phase='flying';app.classList.add('flying');aimGroup.visible=false;
  const result=compute(power,aim),flightPoints=result.points,rollPoints=result.rolling;
- const flightDuration=3900,rollDuration=rollPoints.length?2100:0,totalDuration=flightDuration+rollDuration,start=performance.now();
+ const flightDuration=2900,rollDuration=rollPoints.length?2100:0,totalDuration=flightDuration+rollDuration,start=performance.now();
  shot={ball:{x:0,y:height(0,0)+.4,z:0}};
  let trailPoints=[],trailLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xfff2c9,transparent:true,opacity:.85}));
  scene.add(trailLine);
