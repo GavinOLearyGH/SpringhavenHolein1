@@ -1,0 +1,35 @@
+name: Score Today’s Ace
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: todays-ace-scoreboard
+  cancel-in-progress: false
+
+jobs:
+  score:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == 'Today’s Ace score'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+      - run: node leaderboard/build.mjs
+      - run: node leaderboard/github-board.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Publish shared scores
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add leaderboard/results.json
+          if git diff --quiet --cached; then exit 0; fi
+          git commit -m "Update Today’s Ace leaderboard"
+          git pull --rebase origin main
+          git push origin HEAD:main
