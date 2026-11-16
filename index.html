@@ -32,9 +32,10 @@ function height(x,z){
  const front=wallFrontZ(x);
  const shelf=4.1/(1+Math.exp(-(z-front)*.68));
  const leftDrop=1/(1+Math.exp((x+11)*.24));
- return approach+shelf*(1-.75*leftDrop)+Math.max(0,z/greenZ)*.25;
+ const basin=pondFootprint(x,z)?-2.4:0;
+ return approach+shelf*(1-.75*leftDrop)+Math.max(0,z/greenZ)*.25+basin;
 }
-const pondSurfaceY=height(-28,pondZ)+.10;
+const pondSurfaceY=height(-28,pondZ)+.75;
 const wallTopY=x=>height(x,wallFrontZ(x))+.15;
 function mesh(geometry,mat,x=0,y=0,z=0){let m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);m.receiveShadow=true;scene.add(m);return m}
 let terrain=new THREE.PlaneGeometry(350,Math.max(480,greenZ+260),65,95);terrain.rotateX(-Math.PI/2);let pos=terrain.attributes.position;for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i)+greenZ*.55;pos.setY(i,height(x,z))}terrain.computeVertexNormals();mesh(terrain,rough,0,0,0);
@@ -103,7 +104,7 @@ for(let [name,dist] of clubs){let b=document.createElement('button');b.innerHTML
 function drawClubs(){[...$('clubs').children].forEach((b,i)=>b.classList.toggle('active',clubs[i][0]===club))}drawClubs();
 function choices(){$('shape').textContent=shapes[shape];$('flight').textContent=flights[flight]}choices();
 $('shapeMinus').onclick=()=>{shape=Math.max(0,shape-1);choices()};$('shapePlus').onclick=()=>{shape=Math.min(2,shape+1);choices()};$('flightMinus').onclick=()=>{flight=Math.max(0,flight-1);choices()};$('flightPlus').onclick=()=>{flight=Math.min(2,flight+1);choices()};
-function setCamera(){if(phase==='flying'&&shot){let p=shot.ball;camera.position.set(p.x+Math.sin(cameraYaw)*18,p.y+11,p.z-24);camera.lookAt(p.x,p.y+1,p.z+22);return}camera.position.set(Math.sin(cameraYaw)*8,15,-24);camera.lookAt(Math.sin(cameraYaw)*19,3.5,greenZ*.62)}
+function setCamera(){if(phase==='flying'&&shot){let p=shot.ball;camera.position.set(p.x+Math.sin(cameraYaw)*18,p.y+11,p.z-24);camera.lookAt(p.x,p.y+1,p.z+22);return}camera.position.set(Math.sin(cameraYaw)*8,15,-24);camera.lookAt(greenX*.6+Math.sin(cameraYaw)*19,3.5,greenZ*.68)}
 function render(){requestAnimationFrame(render);if(animation)animation(performance.now());setCamera();renderer.render(scene,camera)}render();
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);const b=$('ballTarget');b.style.top=Math.round(innerHeight*.71)+'px'}addEventListener('resize',resize);resize();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),YD=.9144,MPH=.44704;
