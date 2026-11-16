@@ -4,6 +4,10 @@ The root `index.html` runs on GitHub Pages or from a local file. It labels the s
 
 ## Deploy
 
+From the repository root, run `npm --prefix leaderboard run deploy -- --login`. Sign in to Cloudflare when the browser opens. The command reuses or creates the `springhaven-leaderboard` database, applies migrations, and prints the public Worker URL. Open that same URL on both devices. To redeploy with an existing login, omit `-- --login`.
+
+### Manual deployment
+
 From the repository root:
 
 1. Run `npx wrangler login`, then `npx wrangler d1 create springhaven-leaderboard`.
