@@ -17,10 +17,14 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 #ball-marker{position:absolute;width:20px;height:20px;border:1px solid #fff9;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #2032205f}
 #ball-marker.grabbed{width:27px;height:27px;border:2px solid #ffe9ad;box-shadow:0 0 0 2px #22322299,0 0 12px #ffd87b8c}
 #pull-handle{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:32px;height:32px;border:2px solid #ffe9ad;border-radius:50%;background:#18241d2b;box-shadow:0 0 0 2px #162219a8,0 2px 8px #17231288}
-#pull-tether{position:absolute;pointer-events:none;height:2px;background:#ffe4a3;box-shadow:0 1px 3px #172312b3;transform-origin:left center;border-radius:2px}
+#pull-tether,#pull-aim{position:absolute;pointer-events:none;height:2px;transform-origin:left center;border-radius:2px;filter:drop-shadow(0 1px 1px #172312b3)}
+#pull-tether{background:#ffe4a3}
+#pull-aim{background:repeating-linear-gradient(90deg,#ffe4a3 0 9px,transparent 9px 14px)}
+#flyover{position:absolute;top:8px;right:12px;z-index:2;min-height:40px;padding:.4rem .6rem;background:#142018ec;color:var(--gold);font-size:.82rem}
+#flyover-fade{position:absolute;inset:0;background:#121b17;opacity:0;pointer-events:none;z-index:1}
 .stage-hud{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:57%;pointer-events:none}
 .stage-hud>span,.shot-letter{background:#142018ec;padding:.38rem .55rem;border:1px solid #fff3;border-radius:6px;color:#fff;font-size:.82rem}
-.map-card{position:absolute;right:12px;top:12px;height:min(282px,calc(100% - 24px));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
+.map-card{position:absolute;right:12px;top:54px;height:min(282px,calc(100% - 64px));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
 #map{display:block;width:100%;height:100%}
 #trace{position:absolute;left:12px;bottom:12px;pointer-events:none}
 .controls{display:flex;align-items:end;gap:.65rem;flex-wrap:wrap;padding:.85rem 0}
@@ -49,7 +53,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   header{margin-bottom:.55rem;gap:.35rem}.club-brand{font-size:.63rem;letter-spacing:.1em}h1{font-size:1.8rem}
   .mode-buttons button{padding:.35rem .47rem;font-size:.84rem}.context{font-size:.76rem}
   #course{height:clamp(260px,48svh,490px)}.stage-hud{left:6px;top:6px;max-width:63%}.stage-hud>span{font-size:.72rem;padding:.3rem .42rem}
-  .map-card{right:6px;top:6px;height:min(218px,calc(100% - 14px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
+  #flyover{top:6px;right:6px;min-height:42px}.map-card{right:6px;top:53px;height:min(206px,calc(100% - 61px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
   .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
   .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
   #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1}
@@ -62,10 +66,12 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div class="stage" aria-label="First-person view of Hole 6">
 <canvas id="course" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
 <div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span><span id="aim-offset" hidden></span></div>
+<button id="flyover" type="button">Flyover</button>
 <div class="map-card"><canvas id="map" width="164" height="516" role="img" aria-label="Overhead view of hole 6, with the green at the top and tee boxes at the bottom. Tracks the ball during the shot."></canvas></div>
 <div id="aim-ring" hidden></div><div id="ball-marker" hidden></div>
-<div id="pull-tether" hidden aria-hidden="true"></div><div id="pull-handle" hidden aria-hidden="true"></div>
+<div id="pull-aim" hidden aria-hidden="true"></div><div id="pull-tether" hidden aria-hidden="true"></div><div id="pull-handle" hidden aria-hidden="true"></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
+<div id="flyover-fade" hidden aria-hidden="true"></div>
 </div>
 <div class="controls shot-controls" aria-label="Shot controls">
 <label>Club · carry<select id="club"></select></label>
@@ -614,7 +620,7 @@ function makeRenderer(canvas,map){
         const width=Math.round(canvas.clientWidth*ratio),height=Math.round(canvas.clientHeight*ratio);
         const still=ball.mode==='rest'||ball.mode==='holed'||ball.mode==='water'||ball.mode==='out';
         if(still){
-            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,aim?.pulling,aim?.distance,trail.length].join();
+            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,trail.length].join();
             if(lastStatic===view)return;
             lastStatic=view;
         }else lastStatic=null;
@@ -633,21 +639,7 @@ function makeRenderer(canvas,map){
         disk(moving,pin.x,base+.012,pin.z,cupRadius,[.09,.13,.08]);
         post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
         triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
-        if(aim){
-            if(!aim.pulling)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
-            if(aim.pulling){
-                const dx=Math.cos(aim.heading),dz=Math.sin(aim.heading);
-                const length=aim.distance,width=aim.near?.019:.037;
-                for(let start=.23;start<length;start+=aim.near?.28:1.05){
-                    const end=Math.min(length,start+(aim.near?.17:.66));
-                    const stripe=(distance,side)=>{
-                        const x=ball.x+dx*distance-dz*side,z=ball.z+dz*distance+dx*side;
-                        return [x,Math.max(ground(x,z),waterHeight)+.035,z];
-                    };
-                    quad(moving,stripe(start,-width),stripe(start,width),stripe(end,width),stripe(end,-width),[.99,.85,.51]);
-                }
-            }
-        }
+        if(aim)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
         if(ball.mode!=='holed'){
             const size=flying?.076:ball.mode==='drop'?ballRadius:.046;
             const y=ball.y+(ball.mode==='rest'?.023:0);
@@ -677,7 +669,8 @@ function makeRenderer(canvas,map){
 }
 const $=id=>document.getElementById(id);
 const canvas=$('course'), mapCanvas=$('map'), status=$('status');
-const ballMarker=$('ball-marker'),pullHandle=$('pull-handle'),pullTether=$('pull-tether');
+const ballMarker=$('ball-marker'),pullHandle=$('pull-handle'),pullTether=$('pull-tether'),pullAim=$('pull-aim');
+const flyButton=$('flyover'),flyFade=$('flyover-fade');
 const map=atlas(),mapContext=mapCanvas.getContext('2d');
 const mapBounds={x:55,z:59,length:1295,width:411};
 const mapWidth=mapCanvas.width,mapHeight=mapCanvas.height;
@@ -745,15 +738,15 @@ function applyMode(){
     }
 }
 function setMode(isDaily){
-    if(daily===isDaily||active())return;
+    if(daily===isDaily||active()||flyover)return;
     daily=isDaily;previousClub=null;previousAim=null;presetPower=1;
     reset();
 }
 let heading=0,ball,strokeFrom,shotHeading,stroke=0,penalties=0,trail=[],charge=0,drag=null,keyTime=null;
 let eye,target,lastTime=0,accumulator=0,trailTime=0,shotStarted=0;
-let mapTrail=[],waterMark=null;
+let mapTrail=[],waterMark=null,flyover=null;
 const active=()=>['air','roll','drop'].includes(ball.mode);
-const editable=()=>ball.mode==='rest'&&!finished;
+const editable=()=>ball.mode==='rest'&&!finished&&!flyover;
 const flatDistance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const angleTo=(a,b)=>Math.atan2(b.z-a.z,b.x-a.x);
 function practicePoint(){
@@ -824,7 +817,7 @@ function updateHUD(){
     const pulling=drag?.kind==='shot';
     $('hit').classList.toggle('pulling',pulling);
     ballMarker.classList.toggle('grabbed',pulling);
-    if(!pulling)pullHandle.hidden=pullTether.hidden=true;
+    if(!pulling)pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;
     $('carry').hidden=!Number.isFinite(carry);
     if(Number.isFinite(carry))$('carry').textContent='Wall · '+yards(carry)+' yd';
     const isPutting=editable()&&lie==='green';
@@ -839,12 +832,15 @@ function updateHUD(){
     $('score').textContent=daily?stats.attempts+' '+(stats.attempts===1?'attempt':'attempts'):stroke+' '+(stroke===1?'stroke':'strokes')+(penalties?' · '+penalties+' penalty':'');
     $('trace').hidden=!active();
     $('retry').hidden=!daily||!finished;
+    $('retry').disabled=!!flyover;
+    flyButton.textContent=flyover?'Skip flyover':'Flyover';
+    flyButton.disabled=!renderer||active();
     $('daily').setAttribute('aria-pressed',String(daily));
     $('practice-mode').setAttribute('aria-pressed',String(!daily));
-    $('daily').disabled=$('practice-mode').disabled=active();
+    $('daily').disabled=$('practice-mode').disabled=active()||!!flyover;
     $('practice-settings').hidden=daily;
     for(const name of ['club','hit','fine-left','fine-right','power-down','power-up','hit-preset'])$(name).disabled=!editable()||!renderer;
-    for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset'])$(name).disabled=active();
+    for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset'])$(name).disabled=active()||!!flyover;
     if(!active())drawMap();
 }
 function mapPoint(point){
@@ -926,7 +922,7 @@ function beginDrag(event,kind){
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     const room=(window.visualViewport?.height||window.innerHeight||800)-event.clientY-14;
-    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind,charge,dx:0,depth:0,
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind,charge,depth:0,
         travel:clamp(room,126,210)};
     if(kind==='shot'){
         setPower(0);
@@ -961,7 +957,7 @@ function previewDrag(event){
         turn=-Math.sign(dx)*(.00025*width+.000014*Math.max(0,width-16)**2);
         turn=clamp(turn,-.48,.48);
         const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
-        drag.dx=dx;drag.depth=depth;
+        drag.depth=depth;
         // Give high-power shots more physical travel for precise distance control.
         setPower(depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
     }else{
@@ -994,7 +990,7 @@ for(const element of [canvas,$('hit')]){
 }
 const aimIncrement=()=>$('club').value==='Putter'?.007:.005;
 window.addEventListener('keydown',event=>{
-    if(event.code==='Escape'){cancel();return;}
+    if(event.code==='Escape'){if(flyover)stopFlyover();else cancel();return;}
     if(event.target.matches?.('input,select,button') && !(event.target===$('hit')&&event.code==='Space'))return;
     if(!editable())return;
     if(event.code==='ArrowLeft'||event.code==='ArrowRight'){
@@ -1092,30 +1088,77 @@ function showMarker(element,point){
     element.hidden=!point||point.x<6||point.x>canvas.clientWidth-6||point.y<6||point.y>canvas.clientHeight-6;
     if(!element.hidden){element.style.left=point.x+'px';element.style.top=point.y+'px';}
 }
-function drawPullHandle(anchor){
+function roomOnRay(anchor,dx,dy,inset){
+    const horizontal=dx>0?(canvas.clientWidth-inset-anchor.x)/dx:dx<0?(inset-anchor.x)/dx:Infinity;
+    const vertical=dy>0?(canvas.clientHeight-inset-anchor.y)/dy:dy<0?(inset-anchor.y)/dy:Infinity;
+    return Math.max(0,Math.min(horizontal,vertical));
+}
+function positionGuide(element,x,y,length,angle){
+    element.style.left=x+'px';
+    element.style.top=y+'px';
+    element.style.width=length+'px';
+    element.style.transform='translateY(-50%) rotate('+angle+'rad)';
+}
+function drawPullGuide(anchor,near){
     if(drag?.kind!=='shot')return;
-    if(ballMarker.hidden){pullHandle.hidden=pullTether.hidden=true;return;}
-    const inset=18;
-    const room=Math.max(0,canvas.clientHeight-inset-anchor.y);
-    // Compress the gesture so the handle stays inside the view and above the finger.
-    const y=anchor.y+Math.min(54,room)*drag.depth;
-    const x=clamp(anchor.x+clamp(drag.dx*.62,-76,76),inset,canvas.clientWidth-inset);
-    const dx=x-anchor.x,dy=y-anchor.y,length=Math.hypot(dx,dy);
-    pullHandle.hidden=length<6;
-    pullTether.hidden=length<17;
-    if(pullHandle.hidden)return;
-    pullHandle.style.left=x+'px';
-    pullHandle.style.top=y+'px';
-    if(pullTether.hidden)return;
-    const start=8/length;
-    pullTether.style.left=anchor.x+dx*start+'px';
-    pullTether.style.top=anchor.y+dy*start+'px';
-    pullTether.style.width=length-16+'px';
-    pullTether.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+    const distance=pullAimDistance(near);
+    const bearing=renderer.project(ball.x+Math.cos(heading)*Math.max(1,distance),
+        ball.y+.022,ball.z+Math.sin(heading)*Math.max(1,distance));
+    if(ballMarker.hidden||!bearing){pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;return;}
+    const vx=bearing.x-anchor.x,vy=bearing.y-anchor.y,span=Math.hypot(vx,vy);
+    if(span<.01){pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;return;}
+    const dx=vx/span,dy=vy/span,angle=Math.atan2(dy,dx);
+    const forward=Math.min(span*Math.min(1,distance),roomOnRay(anchor,dx,dy,10));
+    const back=Math.min(54*drag.depth,roomOnRay(anchor,-dx,-dy,18));
+    pullAim.hidden=forward<13;
+    if(!pullAim.hidden)positionGuide(pullAim,anchor.x+dx*10,anchor.y+dy*10,forward-10,angle);
+    pullHandle.hidden=back<6;
+    pullTether.hidden=back<17;
+    if(!pullHandle.hidden){
+        pullHandle.style.left=anchor.x-dx*back+'px';
+        pullHandle.style.top=anchor.y-dy*back+'px';
+    }
+    if(!pullTether.hidden)positionGuide(pullTether,anchor.x-dx*(back-8),anchor.y-dy*(back-8),back-16,angle);
+}
+function stopFlyover(){
+    flyover=null;
+    flyFade.hidden=true;
+    flyFade.style.opacity=0;
+    updateHUD();
+}
+flyButton.onclick=()=>{
+    if(flyover){stopFlyover();return;}
+    if(!renderer||active()||drag||keyTime!==null)return;
+    const tee=settings.tee,green=pins.middle;
+    const size=flatDistance(tee,green),dx=(green.x-tee.x)/size,dz=(green.z-tee.z)/size;
+    flyover={tee,green,size,dx,dz,started:null};
+    flyFade.hidden=false;
+    showMarker($('aim-ring'),null);showMarker(ballMarker,null);
+    updateHUD();
+};
+function renderFlyover(now){
+    const tour=flyover;
+    tour.started??=now;
+    const elapsed=(now-tour.started)/1000;
+    if(elapsed>=6.2){stopFlyover();return false;}
+    if(elapsed>=5.8){
+        flyFade.style.opacity=1-ease((elapsed-5.8)/.4);
+        if(eye&&target)renderer.frame(eye,target,settings.pin,ball,null,trail,heading,false);
+        return true;
+    }
+    flyFade.style.opacity=ease((elapsed-5.45)/.35);
+    const u=ease(elapsed/4.9),along=mix(-4,tour.size-12,u);
+    const x=tour.tee.x+tour.dx*along,z=tour.tee.z+tour.dz*along;
+    const look=Math.min(tour.size,along+mix(19,12,u));
+    const tx=tour.tee.x+tour.dx*look,tz=tour.tee.z+tour.dz*look;
+    const height=mix(ground(tour.tee.x,tour.tee.z)+1.65,ground(tour.green.x,tour.green.z)+7,u)+23*Math.sin(Math.PI*u);
+    renderer.frame([x,height,z],[tx,ground(tx,tz)+mix(-2,.16,u),tz],settings.pin,ball,null,[],0,false);
+    return true;
 }
 function frame(now){
     const dt=Math.min((now-(lastTime||now))/1000,.06);
     lastTime=now;
+    if(flyover&&renderFlyover(now)){requestAnimationFrame(frame);return;}
     if(keyTime!==null)setPower((now-keyTime)/1350);
     if(active()){
         if(!shotStarted)shotStarted=now;
@@ -1149,8 +1192,7 @@ function frame(now){
     const back=following?5.7:near?1.8:2.5;
     const ex=ball.x-forwardX*back,ez=ball.z-forwardZ*back;
     const ey=following?Math.max(ground(ex,ez)+2.2,ball.y-1.2):ground(ball.x,ball.z)+(near?1.2:1.62);
-    const aimDist=pulling?pullAimDistance(near):
-        near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
+    const aimDist=near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
     const aimX=clamp(ball.x+Math.cos(heading)*aimDist,0,courseWidth),aimZ=clamp(ball.z+Math.sin(heading)*aimDist,0,courseDepth);
     const desiredEye=[ex,ey,ez];
     // Keep enough ground below the ready ball for the pullback handle on short screens.
@@ -1159,12 +1201,12 @@ function frame(now){
     const smooth=following?1-Math.exp(-dt*9):1;
     eye=eye?eye.map((n,i)=>mix(n,desiredEye[i],smooth)):desiredEye;
     target=target?target.map((n,i)=>mix(n,desiredTarget[i],smooth)):desiredTarget;
-    const aim=editable()?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near,pulling,heading,distance:aimDist}:null;
+    const aim=editable()&&!pulling?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near}:null;
     renderer.frame(eye,target,settings.pin,ball,aim,trail,h,following);
-    showMarker($('aim-ring'),aim&&(!pulling||charge>=.12)?renderer.project(aim.x,aim.y+.09,aim.z):null);
+    showMarker($('aim-ring'),aim?renderer.project(aim.x,aim.y+.09,aim.z):null);
     const anchor=editable()?renderer.project(ball.x,ball.y+.022,ball.z):null;
     showMarker(ballMarker,anchor);
-    drawPullHandle(anchor);
+    drawPullGuide(anchor,near);
     requestAnimationFrame(frame);
 }
 reset();
