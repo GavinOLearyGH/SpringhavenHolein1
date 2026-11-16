@@ -80,7 +80,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div class="controls shot-controls" aria-label="Shot controls">
 <label>Club · carry<select id="club"></select></label>
 <button id="hit" aria-describedby="controls-guide">Pull back to swing</button>
-<label id="power-wrap"><span id="power-label" title="Flat roll estimates distance on level ground at the selected green speed.">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
+<label id="power-wrap"><span id="power-label" title="Estimated distance from the ball along your aim, using terrain and green speed. If the ball rolls back, the readout shows how far it reaches and where it settles. The estimate treats the cup as part of the green.">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <p id="landing-feedback" role="status" hidden></p>
@@ -185,9 +185,6 @@ for(const name of bag.slice(0,-1)){
 function putterSpeed(power){
     return mix(clubs.Putter.minimum,clubs.Putter.speed,power**1.12);
 }
-function flatPuttRoll(power,greenSpeed){
-    return power<.025?0:putterSpeed(power)**2*greenSpeed/(2*surfaces.green.brake);
-}
 function strike(point,ground,club,power,heading,lie){
     const config=clubs[club],putt=club==='Putter';
     const speed=putt?putterSpeed(power):config.speed*(.12+.88*power**.87);
@@ -199,7 +196,7 @@ function strike(point,ground,club,power,heading,lie){
     const spin=putt?0:(.44+.018*config.loft)*(.45+.55*power**.8)*(fromRough?.52:fromSand?.63:1);
     return {...newBall(point,ground),vx:Math.cos(heading)*speed*Math.cos(loft)*penalty,
         vy:Math.sin(loft)*speed*penalty,vz:Math.sin(heading)*speed*Math.cos(loft)*penalty,
-        lift:(config.lift||0)*(.55+.45*power),spin,roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
+        putted:putt,lift:(config.lift||0)*(.55+.45*power),spin,roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
 }
 function flagContact(from,to,pin){
     const dx=to.x-from.x,dz=to.z-from.z;
@@ -293,6 +290,34 @@ function land(ball,lie,surface,ground,from,floor){
     ball.spin=(ball.spin||0)*(lie==='green'?.46:.60);
     if(ball.vy<.62){ball.mode='roll';ball.vy=0;}
 }
+function estimatePutt(point,course,heading,power,greenSpeed){
+    if(power<.025)return {reach:0,finish:0};
+    const ball=strike(point,course.ground,'Putter',power,heading,course.surface(point.x,point.z));
+    const settings={greenSpeed,pin:null};
+    const dx=Math.cos(heading),dz=Math.sin(heading);
+    let reach=0,finish=0;
+    while(ball.mode==='roll'){
+        advance(ball,course,settings,1/120);
+        finish=(ball.x-point.x)*dx+(ball.z-point.z)*dz;
+        reach=Math.max(reach,finish);
+    }
+    return {reach,finish};
+}
+function resolveFastPutt(ball,from,pin,speed){
+    const miss=Math.abs((pin.x-from.x)*ball.vz-(pin.z-from.z)*ball.vx)/speed;
+    const center=1-clamp(miss/.024,0,1);
+    // A central putt just over capture pace loses energy and rolls through.
+    const through=mix(.42,.60,clamp((speed-1.5)/.65,0,1));
+    // A harder, direct strike on the stick can send the ball back.
+    const firm=ease(clamp((speed-2.1)/.85,0,1));
+    const retain=mix(.82,mix(through,-.23,firm),center);
+    ball.vx*=retain;
+    ball.vz*=retain;
+    if(retain<0){
+        ball.flag=true;
+        ball.cupCooldown=.32;
+    }
+}
 function advance(ball, course, settings, dt=stepTime){
     ball.time+=dt;
     const {ground,surface,wall,waterHeight}=course;
@@ -343,8 +368,8 @@ function advance(ball, course, settings, dt=stepTime){
         }
     }
     if(ball.mode==='air'&&ball.y>3&&ball.x>=60*scale&&ball.x<=1345*scale&&ball.z>=59*scale&&ball.z<=470*scale&&ball.time<=45)return;
-    const cupFloor=pin.floor??(pin.floor=ground(pin.x,pin.z)),rim=cupFloor+ballRadius;
-    if(ball.mode==='air'&&from.y>rim&&ball.y<=rim){
+    const cupFloor=pin&&(pin.floor??(pin.floor=ground(pin.x,pin.z))),rim=cupFloor+ballRadius;
+    if(pin&&ball.mode==='air'&&from.y>rim&&ball.y<=rim){
         const t=(from.y-rim)/(from.y-ball.y);
         const x=mix(from.x,ball.x,t),z=mix(from.z,ball.z,t);
         if(Math.hypot(x-pin.x,z-pin.z)<=cupRadius-ballRadius&&Math.hypot(ball.vx,ball.vz)<6){
@@ -353,7 +378,7 @@ function advance(ball, course, settings, dt=stepTime){
         }
     }
     if(ball.flagCooldown>0)ball.flagCooldown-=dt;
-    const flagT=ball.flagCooldown>0||Math.min(from.y,ball.y)>cupFloor+2 ? null : flagContact(from,ball,pin);
+    const flagT=!pin||ball.putted||ball.flagCooldown>0||Math.min(from.y,ball.y)>cupFloor+2 ? null : flagContact(from,ball,pin);
     if(flagT!==null){
         const y=mix(from.y,ball.y,flagT);
         const speed=Math.hypot(ball.vx,ball.vz);
@@ -384,8 +409,14 @@ function advance(ball, course, settings, dt=stepTime){
         land(ball,lie,surface,ground,from,floor);
     }
     ball.cupCooldown-=dt;
-    if(ball.mode==='roll'&&lie==='green'&&ball.cupCooldown<=0){
-        const hit=cupContact(from,ball,pin,Math.hypot(ball.vx,ball.vz));
+    if(pin&&ball.putted&&ball.cupExitPending&&
+        Math.hypot(from.x-pin.x,from.z-pin.z)>cupRadius+ballRadius*.55){
+        ball.cupExitPending=false;
+    }
+    if(pin&&ball.mode==='roll'&&lie==='green'&&ball.cupCooldown<=0&&!ball.cupExitPending){
+        const speed=Math.hypot(ball.vx,ball.vz);
+        const hit=cupContact(from,ball,pin,speed);
+        if(hit&&ball.putted)ball.cupExitPending=true;
         if(hit==='capture'){
             ball.mode='drop';ball.x=pin.x;ball.z=pin.z;
         } else if(hit==='lip'){
@@ -398,6 +429,7 @@ function advance(ball, course, settings, dt=stepTime){
         } else if(hit==='over'){
             ball.cupCooldown=.16;
             ball.cupResult='Ran over the cup. ';
+            if(ball.putted)resolveFastPutt(ball,from,pin,speed);
         }
     }
     if(ball.time>45||ball.x<60*scale||ball.x>1345*scale||ball.z<59*scale||ball.z>470*scale)ball.mode='out';
@@ -868,20 +900,30 @@ function practicePoint(){
         default:return settings.tee;
     }
 }
-function setPower(fraction){
+let pacePreview;
+function setPower(fraction,updateLabel=true){
     charge=quantize(clamp(fraction,0,1),powerStep);
     $('power').value=charge*100;
-    renderPowerLabel();
+    if(updateLabel)renderPowerLabel();
 }
 function renderPowerLabel(){
-    if($('club').value!=='Putter'||!ball){
+    if($('club').value!=='Putter'||!ball||!editable()){
         $('power-label').textContent='Power · '+Number((charge*100).toFixed(2))+'%';
         return;
     }
-    const roll=flatPuttRoll(charge,settings.greenSpeed)/.3048;
+    if(pacePreview?.ball!==ball||pacePreview.heading!==heading||
+        pacePreview.power!==charge||pacePreview.speed!==settings.greenSpeed){
+        pacePreview={ball,heading,power:charge,speed:settings.greenSpeed,
+            ...estimatePutt(ball,course,heading,charge,settings.greenSpeed)};
+    }
+    const {reach,finish}=pacePreview;
     const cup=flatDistance(ball,settings.pin)/.3048;
     const format=value=>value<10?Number(value.toFixed(1)):Math.round(value);
-    $('power-label').textContent=format(cup)+' ft to cup · '+format(roll)+' ft flat roll';
+    const distance=metres=>format(Math.abs(metres)/.3048)+' ft';
+    const settled=finish<-.05?distance(finish)+' back of start':distance(finish);
+    const pace=reach-finish>.1524?'Est. reaches '+distance(reach)+' · settles '+settled:
+        'Est. '+distance(reach)+' roll';
+    $('power-label').textContent=format(cup)+' ft to cup · '+pace;
 }
 function reset(){
     applyMode();
@@ -946,7 +988,7 @@ function updateHUD(){
         const ahead=(ground(ball.x+Math.cos(heading)*.2,ball.z+Math.sin(heading)*.2)-ground(ball.x,ball.z))/.2;
         const right=(ground(ball.x-Math.sin(heading)*.2,ball.z+Math.cos(heading)*.2)-ground(ball.x,ball.z))/.2;
         const across=Math.abs(right)<.002?'little side break':right>0?'breaks left':'breaks right';
-        $('slope').textContent=(ahead>=0?'Uphill':'Downhill')+' '+Math.abs(ahead*100).toFixed(1)+'% · '+across;
+        $('slope').textContent=(ahead>=0?'Uphill':'Downhill')+' '+Math.abs(ahead*100).toFixed(1)+'% at ball · '+across;
     }
     $('setup-name').textContent=daily?currentDay+' · '+names[challenge.tee]+' tee · '+names[challenge.pin]+' pin · '+(challenge.speed<1?'Slow':challenge.speed>1?'Fast':'Medium')+' green':'Practice';
     $('daily-best').textContent=!daily||stats.best===null?'':stats.best===0?'Best · Ace':'Best · '+leave(stats.best);
@@ -1080,7 +1122,7 @@ function previewDrag(event){
         const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
         drag.depth=depth;
         // Give high-power shots more physical travel for precise distance control.
-        setPower($('club').value==='Putter'?depth:depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
+        setPower($('club').value==='Putter'?depth:depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58,false);
     }else{
         turn=dx*($('club').value==='Putter'?.0018:.001);
     }
