@@ -569,13 +569,25 @@ function ground(x,z){
     let bank=-3.37*ease((px-610)/430);
     if(pz>365)bank=mix(bank,-2.75,ease((pz-365)/70));
     if(pz<155)bank=mix(bank,-1.4,ease((155-pz)/60));
-    let crest=1119;
-    for(let i=0;i<wall.length-1;i++){
-        const a=wall[i],b=wall[i+1];
-        if(a.z>b.z||z<a.z||z>b.z||a.x<1103*scale)continue;
-        crest=mix(a.x,b.x,(z-a.z)/(b.z-a.z))/scale;
+    // Blend the broad approach bank into the steeper rise behind the wall.
+    // Fade with distance along the wall so its ends join the surrounding grass.
+    const wallBlend=ease((pz-219)/24)*ease((358-pz)/33);
+    // The front-left shoulder reaches putting height before the green starts.
+    const frontShoulder=ease((pz-148)/20)*ease((247-pz)/13);
+    const approachRise=ease((px-1032)/mix(109,90,frontShoulder));
+    let rise=approachRise;
+    if(wallBlend>0&&px>1020&&px<1141){
+        let crest=wall[0].x/scale;
+        for(let i=1;i<wall.length;i++){
+            const a=wall[i-1],b=wall[i];
+            if(a.z>=b.z)continue;
+            crest=b.x/scale;
+            if(z>b.z)continue;
+            crest=mix(a.x,b.x,clamp((z-a.z)/(b.z-a.z),0,1))/scale;
+            break;
+        }
+        rise=mix(approachRise,ease((px-crest)/8),wallBlend);
     }
-    const rise=pz>=223&&pz<=354?ease((px-crest)/8):ease((px-1032)/109);
     const high=greenHeight(x,z);
     return mix(bank,high,rise)-(lie==='sand'?bunkerDepth(px,pz):0);
 }
