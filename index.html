@@ -79,7 +79,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <label>Wind speed<select id="wind-speed"><option value="0">Calm</option><option value="5">5 mph</option><option value="8">8 mph</option><option value="12">12 mph</option></select></label>
 <label>Practice pin<select id="pin"><option value="middle">Middle</option><option value="front">Front</option><option value="back">Back</option></select></label>
 <label>Green speed<select id="green-speed"><option value="0.8">Slow</option><option value="1" selected>Medium</option><option value="1.24">Fast</option></select></label>
-<label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="sidehill">Sidehill putt</option><option value="short">Short putt</option></select></label>
+<label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="bunker">Bunker</option><option value="sidehill">Sidehill putt</option><option value="short">Short putt</option></select></label>
 <button id="reset">Reset</button>
 </div>
 <div class="info" id="controls-guide"><span>Pull down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
@@ -109,8 +109,13 @@ const clubs = {
 };
 const bag=Object.keys(clubs);
 const surfaces = {
-    tee:[0.32,0.46], fairway:[0.39,0.53], rough:[0.17,1.25],
-    surround:[0.23,0.58], green:[0.30,0.36], sand:[0.04,1.75], bridge:[0.46,0.6]
+    tee:{bounce:.32,brake:.46,forward:.7736,entry:1},
+    fairway:{bounce:.39,brake:.53,forward:.8072,entry:1},
+    rough:{bounce:.14,brake:1.75,forward:.56,entry:.84},
+    surround:{bounce:.23,brake:.78,forward:.7304,entry:.94},
+    green:{bounce:.30,brake:.36,forward:.434,entry:1},
+    sand:{bounce:.025,brake:2.75,forward:.15,entry:.63},
+    bridge:{bounce:.46,brake:.6,forward:.8408,entry:1}
 };
 const windDirections=['Down','Down-right','Right','Up-right','Up','Up-left','Left','Down-left'];
 const mphToMetresPerSecond=.44704;
@@ -165,11 +170,14 @@ for(const name of bag.slice(0,-1)){
 function strike(point,ground,club,power,heading,lie){
     const config=clubs[club],putt=club==='Putter';
     const speed=putt?mix(config.minimum,config.speed,power**1.12):config.speed*(.12+.88*power**.87);
-    const penalty=putt?1:lie==='sand'?(config.loft>=29?.78:.55):lie==='rough'?.89:1;
-    const loft=(config.launch??config.loft)*Math.PI/180;
+    const loftedWedge=config.loft>=33;
+    const fromSand=lie==='sand',fromRough=lie==='rough';
+    const penalty=putt?1:fromSand?(loftedWedge?.74:.49):fromRough?.87:1;
+    const extraLaunch=!putt&&fromSand&&loftedWedge?6:0;
+    const loft=((config.launch??config.loft)+extraLaunch)*Math.PI/180;
     return {...newBall(point,ground),vx:Math.cos(heading)*speed*Math.cos(loft)*penalty,
         vy:Math.sin(loft)*speed*penalty,vz:Math.sin(heading)*speed*Math.cos(loft)*penalty,
-        lift:(config.lift||0)*(.55+.45*power),roll:config.roll,mode:putt?'roll':'air'};
+        lift:(config.lift||0)*(.55+.45*power),roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
 }
 function flagContact(from,to,pin){
     const dx=to.x-from.x,dz=to.z-from.z;
@@ -210,11 +218,45 @@ function crossing(a,b,c,d){
     return t>0&&t<=1&&u>=0&&u<=1?t:null;
 }
 
+function land(ball,lie,surface,ground,from,floor){
+    const material=surfaces[lie]||surfaces.rough;
+    const horizontal=Math.hypot(ball.vx,ball.vz);
+    const descent=clamp(-ball.vy/Math.max(.01,horizontal),0,1.5);
+    let bounce=material.bounce,forward=material.forward;
+    if(lie==='sand'){
+        const shallow=1-ease(descent/.65);
+        forward=mix(forward,.47,shallow);
+        bounce=mix(bounce,.17,shallow);
+    }else if(lie==='fairway'||lie==='tee'){
+        forward*=mix(1.04,.94,ease(descent));
+    }else if(lie==='surround'){
+        forward*=mix(.86,1,ease(descent/.62));
+    }else if(lie==='green'&&horizontal>10&&descent<.28){
+        forward*=mix(1.15,1,ease(descent/.28));
+    }
+    const fromSand=surface(from.x,from.z)==='sand';
+    if(fromSand||lie==='sand'){
+        const span=Math.hypot(ball.x-from.x,ball.z-from.z);
+        if(span>.001&&(floor-ground(from.x,from.z))/span>.23){
+            ball.bunkerLip=true;
+            forward=-Math.min(forward,.16);
+            bounce=Math.min(bounce,.12);
+        }
+    }
+    const retained=Math.min(1,forward*(ball.roll||1));
+    ball.firstLie??=fromSand&&ball.bunkerLip?'sand':lie;
+    ball.y=floor+ballRadius;
+    ball.vx*=retained;
+    ball.vz*=retained;
+    ball.vy=Math.max(0,-ball.vy*bounce);
+    if(ball.vy<.62){ball.mode='roll';ball.vy=0;}
+}
 function advance(ball, course, settings, dt=stepTime){
     ball.time+=dt;
     const {ground,surface,wall,waterHeight}=course;
     const {pin,wind,greenSpeed}=settings;
     const from={x:ball.x,y:ball.y,z:ball.z};
+    let rollingLie;
     if(ball.mode==='drop'){
         ball.y-=dt*.55;
         if(ball.y<ground(pin.x,pin.z)-.13)ball.mode='holed';
@@ -229,9 +271,9 @@ function advance(ball, course, settings, dt=stepTime){
         ball.vx-=7*clamp(gradeX,-.55,.55)*dt;
         ball.vz-=7*clamp(gradeZ,-.55,.55)*dt;
         const pace=Math.hypot(ball.vx,ball.vz);
-        const lie=surface(ball.x,ball.z);
-        const base=(surfaces[lie]||surfaces.rough)[1];
-        const remaining=Math.max(0,pace-(lie==='green'?base/greenSpeed:base)*dt);
+        rollingLie=surface(ball.x,ball.z);
+        const base=(surfaces[rollingLie]||surfaces.rough).brake;
+        const remaining=Math.max(0,pace-(rollingLie==='green'?base/greenSpeed:base)*dt);
         if(remaining<.023){ball.mode='rest';return;}
         ball.vx*=remaining/pace;
         ball.vz*=remaining/pace;
@@ -292,14 +334,12 @@ function advance(ball, course, settings, dt=stepTime){
         ball.mode='water';
         return;
     }
+    if(rollingLie&&rollingLie!==lie&&surfaces[lie]){
+        ball.vx*=surfaces[lie].entry;
+        ball.vz*=surfaces[lie].entry;
+    }
     if(ball.mode==='air'&&ball.y<=floor+ballRadius){
-        ball.y=floor+ballRadius;
-        const bounce=(surfaces[lie]||surfaces.rough)[0];
-        const retained=((lie==='green'?.29:.62)+bounce*.48)*(ball.roll||1);
-        ball.vx*=retained;
-        ball.vz*=retained;
-        ball.vy=-ball.vy*bounce;
-        if(ball.vy<.62){ball.mode='roll';ball.vy=0;}
+        land(ball,lie,surface,ground,from,floor);
     }
     ball.cupCooldown-=dt;
     if(ball.mode==='roll'&&lie==='green'&&ball.cupCooldown<=0){
@@ -336,6 +376,12 @@ const wall=Array.from({length:70},(_,i)=>{
     const p=svgPath.getPointAtLength(wallLength*i/69);
     return {x:p.x*scale,z:p.y*scale,top: -.18-2.6*ease((i/69-.72)/.28)};
 });
+svgPath.setAttribute('d',shapes.sand);
+const bunkerLength=svgPath.getTotalLength();
+const bunkerEdge=Array.from({length:97},(_,i)=>{
+    const point=svgPath.getPointAtLength(bunkerLength*i/96);
+    return {x:point.x,z:point.y};
+});
 vector.remove();
 const waterHeight=-3.45;
 function surface(x,z){
@@ -348,6 +394,19 @@ function surface(x,z){
 function greenHeight(x,z){
     const dx=x-pins.middle.x,dz=z-pins.middle.z;
     return .011*dx+.026*dz+.0023*dz**2+.0011*dx*dz;
+}
+function bunkerDepth(px,pz){
+    let closestSquared=Infinity;
+    for(let i=1;i<bunkerEdge.length;i++){
+        const a=bunkerEdge[i-1],b=bunkerEdge[i];
+        const dx=b.x-a.x,dz=b.z-a.z;
+        const distanceSquared=dx*dx+dz*dz;
+        if(!distanceSquared)continue;
+        const t=clamp(((px-a.x)*dx+(pz-a.z)*dz)/distanceSquared,0,1);
+        const offsetX=px-a.x-t*dx,offsetZ=pz-a.z-t*dz;
+        closestSquared=Math.min(closestSquared,offsetX**2+offsetZ**2);
+    }
+    return .55*ease(Math.sqrt(closestSquared)*scale/1.7);
 }
 function ground(x,z){
     const px=x/scale,pz=z/scale;
@@ -367,7 +426,7 @@ function ground(x,z){
     }
     const rise=pz>=223&&pz<=354?ease((px-crest)/8):ease((px-1032)/109);
     const high=greenHeight(clamp(x,1122*scale,1313*scale),clamp(z,157*scale,330*scale));
-    return mix(bank,high,rise)-(lie==='sand'?.55:0);
+    return mix(bank,high,rise)-(lie==='sand'?bunkerDepth(px,pz):0);
 }
 const course={ground,surface,wall,waterHeight};
 
@@ -666,6 +725,7 @@ function practicePoint(){
     switch($('practice').value){
         case 'bank':return {x:981*scale,z:pin.z};
         case 'sidehill':return {x:pins.middle.x-3.3,z:pins.middle.z-2.4};
+        case 'bunker':return {x:1190*scale,z:360*scale};
         case 'short':return {x:pin.x-.35,z:pin.z-.829};
         default:return settings.tee;
     }
@@ -682,8 +742,9 @@ function reset(){
     heading=angleTo(ball,settings.pin);
     const carry=flatDistance(ball,settings.pin)/.9144-4;
     const suggested=[...bag].reverse().find(name=>clubs[name].carry>=carry)||'3 Iron';
+    const lie=surface(ball.x,ball.z);
     $('club').value=daily&&previousClub?previousClub:
-        surface(ball.x,ball.z)==='green'?'Putter':!daily&&$('practice').value==='bank'?'SW':suggested;
+        lie==='green'?'Putter':lie==='sand'||!daily&&$('practice').value==='bank'?'SW':suggested;
     if(daily&&previousAim!==null)heading=previousAim;
     setPower($('fine').open?presetPower:0);
     status.textContent=renderer?'Pull back to set your shot.':renderError;
@@ -882,6 +943,13 @@ function leave(distance){
     if(distance>=.3048)return (distance/.3048).toFixed(1)+' ft';
     return Math.max(.1,distance/.0254).toFixed(1)+' in';
 }
+function contactSummary(finalLie){
+    const landing=ball.firstLie&&ball.firstLie!==finalLie?'First contact: '+lieNames[ball.firstLie]+'. ':'';
+    if(ball.wall)return landing+'Hit the stone wall. ';
+    if(ball.flag)return landing+'Hit the flagstick. ';
+    if(ball.bunkerLip)return landing+'Caught the bunker lip. ';
+    return landing+(ball.cupResult||'');
+}
 function finishShot(){
     if(daily){
         finished=true;trail=[];
@@ -890,8 +958,11 @@ function finishShot(){
         stats.attempts++;
         if(inPlay&&(stats.best===null||distance<stats.best))stats.best=distance;
         saveStats();
-        const contact=ball.flag?'Flagstick. ':ball.wall?'Stone wall. ':(ball.cupResult||'');
-        status.textContent=holed?'Hole in one!':inPlay?contact+leave(distance)+' to the cup.':contact+(ball.mode==='water'?'Water.':'Out of play.');
+        const lie=inPlay?surface(ball.x,ball.z):ball.mode;
+        const contact=contactSummary(lie);
+        status.textContent=holed?'Hole in one!':inPlay
+            ?contact+leave(distance)+' to the cup. '+lieNames[lie]+'.'
+            :contact+(ball.mode==='water'?'Water.':'Out of play.');
         return;
     }
     if(ball.mode==='holed'){
@@ -901,17 +972,19 @@ function finishShot(){
     if(ball.mode==='water'||ball.mode==='out'){
         penalties++;stroke++;
         const result=ball.mode==='water'?'Water':'Out of play';
-        status.textContent=(ball.wall?'Hit the stone wall. ':'')+result+' · one penalty stroke, replay from the previous lie.';
+        status.textContent=contactSummary(ball.mode)+result+' · one penalty stroke, replay from the previous lie.';
         ball=newBall(strokeFrom,ground);
     }else{
         const played=flatDistance(strokeFrom,ball);
         const distance=$('club').value==='Putter'?feet(played)+' ft':yards(played)+' yd';
-        status.textContent=(ball.wall?'Hit the stone wall. ':'')+(ball.cupResult||'')+distance+' played. '+lieNames[surface(ball.x,ball.z)]+'.';
+        const lie=surface(ball.x,ball.z);
+        status.textContent=contactSummary(lie)+distance+' played. '+lieNames[lie]+'.';
     }
     trail=[];eye=null;target=null;
     heading=angleTo(ball,settings.pin);
-    if(surface(ball.x,ball.z)==='green')$('club').value='Putter';
-    else if($('club').value==='Putter')$('club').value='SW';
+    const lie=surface(ball.x,ball.z);
+    if(lie==='green')$('club').value='Putter';
+    else if(lie==='sand'||$('club').value==='Putter')$('club').value='SW';
 }
 function showMarker(element,point){
     element.hidden=!point||point.x<6||point.x>canvas.clientWidth-6||point.y<6||point.y>canvas.clientHeight-6;
