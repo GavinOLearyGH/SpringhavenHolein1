@@ -62,9 +62,47 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1;min-width:62px}
   .status-row{gap:.45rem;font-size:.84rem}#retry{padding:.45rem .55rem}.info{font-size:.78rem}
 }
+
+.welcome{max-width:980px;margin:clamp(14px,5vw,54px) auto}
+.welcome-hero{padding:clamp(22px,5vw,54px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(125deg,#293b2c,#192720)}
+.welcome-hero h1{font-size:clamp(2.6rem,7vw,5rem)}.welcome-hero p{color:var(--muted);margin:.8rem 0 1.3rem}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:.65rem}.primary{background:var(--gold);color:#252517;font-weight:750}
+.welcome-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;margin-top:1rem}
+.welcome-panel,.result-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,3vw,25px)}
+.welcome-panel h2,.result-panel h2{margin:0 0 .55rem;font:600 1.5rem/1.15 Georgia,serif}
+.leader-name{font-size:1.15rem;font-weight:750;overflow-wrap:anywhere}.leader-detail,.board-source,.subtle{color:var(--muted);font-size:.86rem}
+.welcome-panel p{margin:.35rem 0}.score-bands{display:grid;gap:.4rem;list-style:none;padding:0;margin:.65rem 0 0}
+.score-bands li{display:grid;grid-template-columns:7.2rem 1fr 2.5rem;align-items:center;gap:.5rem;font-size:.82rem}
+.score-bands meter{width:100%;height:.85rem;accent-color:var(--gold)}.score-bands span:last-child{text-align:right}
+.rank-panel{margin-top:1rem}.rank-panel table{width:100%;border-collapse:collapse;text-align:left}
+.rank-panel th,.rank-panel td{padding:.45rem .5rem;border-bottom:1px solid var(--line)}
+.rank-panel td:nth-child(2){overflow-wrap:anywhere}.rank-panel th:last-child,.rank-panel td:last-child{text-align:right;white-space:nowrap}
+.board-source{margin-top:1rem}.result-panel{margin:.8rem 0}.result-panel form{display:flex;flex-wrap:wrap;align-items:end;gap:.65rem}
+.result-panel label{display:grid;gap:.25rem;color:var(--muted);font-size:.86rem}
+.result-panel input{min-height:42px;max-width:100%;width:230px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:.5rem}
+.result-panel input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.play-header{flex-wrap:wrap}.mode-buttons{flex-wrap:wrap}
+@media(max-width:640px){.welcome-grid{grid-template-columns:1fr}.welcome-actions button{flex:1}.result-panel form>*{max-width:100%}}
 </style></head>
 <body><main>
-<header><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practice</button></div></header>
+<section id="welcome" class="welcome" aria-labelledby="welcome-title">
+<div class="welcome-hero">
+<div class="club-brand">THE SPRINGHAVEN CLUB</div>
+<h1 id="welcome-title" tabindex="-1">Today’s Ace</h1>
+<p><strong>Daily Challenge · Hole 6</strong><br><span id="welcome-setup"></span></p>
+<div class="welcome-actions"><button id="open-daily" class="primary">Play the Daily Challenge</button><button id="open-practice">Practise</button></div>
+</div>
+<p id="board-source" class="board-source" role="status"></p>
+<div class="welcome-grid">
+<section class="welcome-panel" aria-labelledby="leader-title"><h2 id="leader-title">Today’s Leader</h2><p id="leader-name" class="leader-name"></p><p id="leader-detail" class="leader-detail"></p></section>
+<section class="welcome-panel" aria-labelledby="distribution-title"><h2 id="distribution-title">Score Distribution</h2><p id="player-count" class="subtle"></p><ul id="score-bands" class="score-bands"></ul></section>
+</div>
+<section class="welcome-panel rank-panel" aria-labelledby="rank-title"><h2 id="rank-title">Leaderboard</h2>
+<p id="board-empty" class="subtle">No scores yet.</p>
+<table id="rank-table" hidden><thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Best shot</th></tr></thead><tbody id="rank-rows"></tbody></table>
+</section></section>
+<section id="game-screen" hidden aria-label="Play Hole 6">
+<header class="play-header"><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practise</button></div></header>
 <div class="context"><span id="setup-name"></span><span id="daily-best"></span></div>
 <div class="stage" aria-label="First-person view of Hole 6">
 <canvas id="course" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
@@ -84,6 +122,15 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 </div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <p id="landing-feedback" role="status" hidden></p>
+<section id="daily-result" class="result-panel" hidden aria-labelledby="result-title">
+<h2 id="result-title" tabindex="-1"></h2>
+<form id="score-form">
+<label>Display name<input id="player-name" name="playerName" maxlength="28" autocomplete="nickname" required></label>
+<button id="post-score" class="primary" type="submit">Post score</button>
+</form>
+<p id="post-status" class="subtle" role="status"></p>
+<div class="welcome-actions"><button id="result-retry">Try again</button><button id="result-home">Back to welcome</button></div>
+</section>
 <details id="fine"><summary>Fine aim and power</summary><div class="controls fine">
 <button id="fine-left" aria-label="Nudge aim left">←</button><button id="fine-right" aria-label="Nudge aim right">→</button>
 <button id="power-down" aria-label="Decrease preset power">−</button><button id="power-up" aria-label="Increase preset power">+</button>
@@ -100,7 +147,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 </div>
 <div class="info" id="controls-guide"><span>Pull down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
 <div class="info">Tee markers are based on scorecard yardages. The two-tier green and pin locations are provisional.</div>
-</main><script>
+</section></main><script>
 const scale = 0.153;
 const courseWidth=1400*scale,courseDepth=500*scale;
 const ballRadius = 0.02135;
@@ -510,33 +557,68 @@ const pins=Object.fromEntries(Object.entries(greenComplex.pinLocations)
     .map(([name,[x,z]])=>[name,{x:x*scale,z:z*scale}]));
 const greenCenter={x:greenComplex.center[0]*scale,z:greenComplex.center[1]*scale};
 const shapes = {"teeArea": "M120 253Q121 229 151 229L224 230Q252 215 291 216L371 216Q410 209 451 212L523 212Q570 212 586 230Q605 245 605 265L605 302Q602 328 558 335Q445 344 327 337Q231 331 150 312Q113 307 120 253Z", "tee": "M139 254L380 243L381 297L141 309Z M459 239L577 235L581 286L464 290Z", "fairway": "M730 271Q734 228 757 211Q778 199 797 188Q814 179 843 178L934 178Q945 185 954 202L981 235Q996 258 997 291Q997 339 984 366Q976 382 958 380Q895 382 827 367Q776 357 747 331Q724 313 730 271Z", "surround": "M1031 191Q1040 148 1102 129Q1167 113 1210 127Q1274 143 1304 185Q1334 211 1321 281Q1313 318 1273 337L1266 344L1264 374Q1240 399 1189 393Q1156 393 1142 371L1135 344Q1119 327 1117 302Q1112 250 1088 228Q1071 208 1039 202Z", "water": "M943 116Q954 111 965 130Q978 148 988 170Q1000 194 1019 218Q1031 224 1062 223Q1100 225 1112 245Q1118 256 1117 279L1119 313Q1119 333 1104 345Q1095 353 1081 359Q1062 338 1047 310Q1030 281 1011 258Q991 234 976 214Q953 193 948 159Z", "wall": "M1021 222Q1047 221 1063 222Q1098 223 1112 242Q1120 253 1118 279L1120 314Q1120 332 1107 344Q1097 354 1082 359", "green": greenComplex.outline, "sand": "M1147 337Q1151 322 1164 325Q1175 326 1186 337Q1193 347 1207 342Q1223 338 1229 351Q1235 367 1221 378Q1209 386 1180 381Q1155 377 1148 366Q1142 355 1147 337Z"};
-const path = Object.fromEntries(Object.entries(shapes).map(([k,d])=>[k,new Path2D(d)]));
-const mask=document.createElement('canvas').getContext('2d');
+function geometryPath(data){
+    const tokens=data.match(/[MLQZ]|-?\d+(?:\.\d+)?/g),paths=[];
+    let i=0,points;
+    const point=()=>[Number(tokens[i++]),Number(tokens[i++])];
+    while(i<tokens.length){
+        const command=tokens[i++];
+        if(command==='M'){points=[point()];paths.push(points);}
+        if(command==='L')points.push(point());
+        if(command==='Q'){
+            const a=points.at(-1),b=point(),c=point();
+            for(let step=1;step<=60;step++){
+                const t=step/60,k=1-t;
+                points.push([k*k*a[0]+2*k*t*b[0]+t*t*c[0],k*k*a[1]+2*k*t*b[1]+t*t*c[1]]);
+            }
+        }
+        if(command==='Z')points.push(points[0]);
+    }
+    for(const points of paths){
+        points.minX=Math.min(...points.map(p=>p[0]));
+        points.maxX=Math.max(...points.map(p=>p[0]));
+        points.minZ=Math.min(...points.map(p=>p[1]));
+        points.maxZ=Math.max(...points.map(p=>p[1]));
+    }
+    return paths;
+}
+function containsPoint(paths,x,z){
+    for(const points of paths){
+        if(x<points.minX||x>points.maxX||z<points.minZ||z>points.maxZ)continue;
+        let inside=false;
+        for(let i=0,j=points.length-1;i<points.length;j=i++){
+            const a=points[i],b=points[j];
+            if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+        }
+        if(inside)return true;
+    }
+    return false;
+}
+function sampleGeometryPath(points,count){
+    const lengths=[0];
+    for(let i=1;i<points.length;i++){
+        const a=points[i-1],b=points[i];
+        lengths.push(lengths.at(-1)+Math.hypot(b[0]-a[0],b[1]-a[1]));
+    }
+    let i=1;
+    return Array.from({length:count},(_,index)=>{
+        const distance=lengths.at(-1)*index/(count-1);
+        while(i<lengths.length-1&&lengths[i]<distance)i++;
+        const t=(distance-lengths[i-1])/(lengths[i]-lengths[i-1]);
+        return {x:mix(points[i-1][0],points[i][0],t),z:mix(points[i-1][1],points[i][1],t)};
+    });
+}
+const geometryPaths=Object.fromEntries(Object.entries(shapes).map(([key,value])=>[key,geometryPath(value)]));
+
 const palette={rough:'#4e6c40',teeArea:'#577b46',tee:'#78a66b',fairway:'#7da65c',
     surround:'#668a4f',water:'#356a7e',bridge:'#a69677',green:'#92b864',sand:'#d7be88'};
-const vector=document.createElementNS('http://www.w3.org/2000/svg','svg');
-vector.setAttribute('style','position:absolute;width:0;height:0;overflow:hidden');
-const svgPath=document.createElementNS('http://www.w3.org/2000/svg','path');
-svgPath.setAttribute('d',shapes.wall);
-vector.append(svgPath);
-document.body.append(vector);
-const wallLength=svgPath.getTotalLength();
-const wall=Array.from({length:70},(_,i)=>{
-    const p=svgPath.getPointAtLength(wallLength*i/69);
-    return {x:p.x*scale,z:p.y*scale};
-});
-svgPath.setAttribute('d',shapes.sand);
-const bunkerLength=svgPath.getTotalLength();
-const bunkerEdge=Array.from({length:97},(_,i)=>{
-    const point=svgPath.getPointAtLength(bunkerLength*i/96);
-    return {x:point.x,z:point.y};
-});
-vector.remove();
+const wall=sampleGeometryPath(geometryPaths.wall[0],70).map(p=>({x:p.x*scale,z:p.z*scale}));
+const bunkerEdge=sampleGeometryPath(geometryPaths.sand[0],97);
 const waterHeight=-3.45;
 function terrainSurface(x,z){
     const px=x/scale,pz=z/scale;
     for(const key of ['water','sand','green','tee','fairway','surround']){
-        if(mask.isPointInPath(path[key],px,pz))return key;
+        if(containsPoint(geometryPaths[key],px,pz))return key;
     }
     return 'rough';
 }
@@ -651,7 +733,6 @@ function bridgePoint(t,width){
 }
 const bridgeCorners=[bridgePoint(0,-bridge.halfWidth),bridgePoint(1,-bridge.halfWidth),
     bridgePoint(1,bridge.halfWidth),bridgePoint(0,bridge.halfWidth)];
-path.bridge=new Path2D(bridgeCorners.map((p,i)=>(i?'L':'M')+p.x/scale+' '+p.z/scale).join('')+'Z');
 const bridgeBank=bridgeCorners.map(p=>terrainGround(p.x,p.z));
 function bridgeDeck(t,width){
     const side=(width/bridge.halfWidth+1)/2;
@@ -671,6 +752,38 @@ function ground(x,z){return bridgeHeight(x,z)??terrainGround(x,z);}
 function surface(x,z){return bridgeHeight(x,z)===undefined?terrainSurface(x,z):'bridge';}
 const course={ground,surface,wall,waterHeight,bridgeHeight,terrainGround,terrainSurface};
 
+// Eastern time gives all players the same course setup for the club's calendar day.
+const dateParts=new Intl.DateTimeFormat('en',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
+function dayKey(now=new Date()){
+    const parts=Object.fromEntries(dateParts.formatToParts(now).map(({type,value})=>[type,value]));
+    return parts.year+'-'+parts.month+'-'+parts.day;
+}
+// Each forecast and pin here has a repeatable ace using the on-screen aim and power increments.
+const dailySetups=[
+    ['forward','middle',0,0,1],
+    ['middle','back',3,6,1.24,189.16,34.66],
+    ['forward','back',7,8,1.24],
+    ['back','back',0,8,.8,197.15,36.05],
+];
+function challengeFor(day){
+    const calendarDay=Math.floor(Date.parse(day+'T00:00:00Z')/86400000);
+    const index=(calendarDay%dailySetups.length+dailySetups.length)%dailySetups.length;
+    const [tee,pin,dir,mph,speed,x,z]=dailySetups[index];
+    return {tee,pin,dir,mph,speed,cup:x===undefined?pins[pin]:{x,z}};
+}
+// The leaderboard replays this same physics and course data from the HTML build.
+function replayDailyShot(day,club,power,heading){
+    const setup=challengeFor(day),tee=tees[setup.tee],pin=setup.cup;
+    const replaySettings={pin,wind:windVector(setup.dir,setup.mph),greenSpeed:setup.speed};
+    const ball=strike(tee,ground,club,power,heading,surface(tee.x,tee.z));
+    while(ball.time<50&&['air','roll','drop'].includes(ball.mode))advance(ball,course,replaySettings);
+    if(ball.mode==='holed')return {ace:true,distance:0};
+    if(ball.mode==='rest')return {ace:false,distance:Math.hypot(ball.x-pin.x,ball.z-pin.z)};
+    return null;
+}
+// End shared physics.
+const path=Object.fromEntries(Object.entries(shapes).map(([key,d])=>[key,new Path2D(d)]));
+path.bridge=new Path2D(bridgeCorners.map((p,i)=>(i?'L':'M')+p.x/scale+' '+p.z/scale).join('')+'Z');
 function atlas(){
     const canvas=document.createElement('canvas');
     canvas.width=1400;canvas.height=500;
@@ -981,9 +1094,7 @@ backdrop.translate(-mapBounds.x,-mapBounds.z);
 backdrop.fillStyle=palette.bridge;
 backdrop.fill(path.bridge);
 backdrop.restore();
-let renderer,renderError;
-try {renderer=makeRenderer(canvas,map);}
-catch(error){renderError=error.message;}
+let renderer,renderError,rendererAttempted=false;
 const yards=metres=>Math.round(metres/0.9144);
 const feet=metres=>Math.round(metres/0.3048);
 const settings={pin:pins.middle,wind:windPresets.calm,greenSpeed:1,tee:tees.middle};
@@ -991,25 +1102,6 @@ const names={back:'Back',middle:'Middle',forward:'Forward',front:'Front'};
 const pinNames={frontLeft:'Front left',front:'Front center',frontRight:'Front right',
     middleLeft:'Middle left',middle:'Middle center',middleRight:'Middle right',
     backLeft:'Back left',back:'Back center',backRight:'Back right'};
-// Eastern time gives all players the same course setup for the club's calendar day.
-const dateParts=new Intl.DateTimeFormat('en',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
-function dayKey(now=new Date()){
-    const parts=Object.fromEntries(dateParts.formatToParts(now).map(({type,value})=>[type,value]));
-    return parts.year+'-'+parts.month+'-'+parts.day;
-}
-// Each forecast and pin here has a repeatable ace using the on-screen aim and power increments.
-const dailySetups=[
-    ['forward','middle',0,0,1],
-    ['middle','back',3,6,1.24,189.16,34.66],
-    ['forward','back',7,8,1.24],
-    ['back','back',0,8,.8,197.15,36.05],
-];
-function challengeFor(day){
-    const calendarDay=Math.floor(Date.parse(day+'T00:00:00Z')/86400000);
-    const index=(calendarDay%dailySetups.length+dailySetups.length)%dailySetups.length;
-    const [tee,pin,dir,mph,speed,x,z]=dailySetups[index];
-    return {tee,pin,dir,mph,speed,cup:x===undefined?pins[pin]:{x,z}};
-}
 function readStats(day){
     try{
         const stats=JSON.parse(localStorage.getItem('springhaven-ace-'+day));
@@ -1052,7 +1144,7 @@ let heading=0,ball,strokeFrom,shotHeading,stroke=0,penalties=0,trail=[],charge=0
 let eye,target,lastTime=0,accumulator=0,trailTime=0,shotStarted=0;
 let mapTrail=[],waterMark=null,flyover=null,showGreenGrid=true;
 const active=()=>['air','roll','drop'].includes(ball.mode);
-const editable=()=>ball.mode==='rest'&&!finished&&!flyover;
+const editable=()=>!$('game-screen').hidden&&ball.mode==='rest'&&!finished&&!flyover;
 const flatDistance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const angleTo=(a,b)=>Math.atan2(b.z-a.z,b.x-a.x);
 function practicePoint(){
@@ -1095,6 +1187,7 @@ function renderPowerLabel(){
 }
 function reset(){
     applyMode();
+    hideDailyResult();
     mapTrail=[];waterMark=null;
     $('landing-feedback').hidden=true;
     finished=false;presetActive=false;stroke=0;penalties=0;trail=[];drag=null;keyTime=null;eye=null;target=null;
@@ -1162,7 +1255,8 @@ function updateHUD(){
     $('daily-best').textContent=!daily||stats.best===null?'':stats.best===0?'Best · Ace':'Best · '+leave(stats.best);
     $('score').textContent=daily?stats.attempts+' '+(stats.attempts===1?'attempt':'attempts'):stroke+' '+(stroke===1?'stroke':'strokes')+(penalties?' · '+penalties+' penalty':'');
     $('trace').hidden=!active();
-    $('retry').hidden=!daily||!finished;
+    $('retry').hidden=!daily||!finished||!$('daily-result').hidden;
+    $('back-home').disabled=active()||!!flyover;
     $('retry').disabled=!!flyover;
     flyButton.textContent=flyover?'Skip flyover':'Flyover';
     flyButton.disabled=!renderer||active();
@@ -1230,9 +1324,15 @@ function drawMap(){
 }
 function shoot(){
     if(!editable()||charge<.025||!renderer){setPower(0);return;}
+    if(daily&&currentDay!==dayKey()){
+        reset();status.textContent='A new daily challenge is ready. Set up your shot again.';return;
+    }
     strokeFrom={x:ball.x,z:ball.z};
     shotHeading=heading;stroke++;
-    if(daily){previousClub=$('club').value;previousAim=heading;}
+    if(daily){
+        previousClub=$('club').value;previousAim=heading;
+        pendingShot={day:currentDay,club:previousClub,power:charge,heading:Math.atan2(Math.sin(heading),Math.cos(heading))};
+    }
     presetPower=charge;trail=[];trailTime=0;shotStarted=0;
     mapTrail=[];waterMark=null;
     $('landing-feedback').hidden=true;
@@ -1396,6 +1496,7 @@ function finishShot(){
         status.textContent=holed?'Hole in one!':inPlay
             ?contact+leave(distance)+' to the cup. '+lieNames[lie]+'.'
             :contact+(ball.mode==='water'?'Water.':'Out of play.');
+        showDailyResult(inPlay?{...pendingShot,ace:holed,distance}:null);
         return;
     }
     if(ball.mode==='holed'){
@@ -1491,6 +1592,7 @@ function renderFlyover(now){
     return true;
 }
 function frame(now){
+    if($('game-screen').hidden||!renderer){lastTime=0;requestAnimationFrame(frame);return;}
     const dt=Math.min((now-(lastTime||now))/1000,.06);
     lastTime=now;
     if(flyover&&renderFlyover(now)){requestAnimationFrame(frame);return;}
@@ -1545,7 +1647,155 @@ function frame(now){
     drawPullGuide(anchor,near);
     requestAnimationFrame(frame);
 }
+
+const scoreBands=['Ace','Inside 3 ft','3–under 10 ft','10–under 25 ft','25 ft or more'];
+const leaderEndpoint=location.protocol==='file:'?null:new URL('api/leaderboard',location.href);
+let pendingShot=null,visibleResult=null,savingResult=null,boardState='loading',boardDate='',boardRequest=0;
+function readBrowser(key){
+    try{return JSON.parse(localStorage.getItem(key));}catch{return null;}
+}
+function saveBrowser(key,value){
+    try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{return false;}
+}
+function localBoard(day){
+    const score=readBrowser('springhaven-posted-'+day),counts=[0,0,0,0,0];
+    if(!score||typeof score.name!=='string'||!Number.isFinite(score.mm))return {total:0,counts,leaders:[]};
+    counts[score.ace?0:score.mm<914.4?1:score.mm<3048?2:score.mm<7620?3:4]=1;
+    return {total:1,counts,leaders:[score]};
+}
+function scoreText(score){return score.ace?'Hole in one':leave(score.mm/1000);}
+function renderScoreboard(board){
+    const {leaders,total,counts}=board;
+    $('leader-title').textContent=counts[0]?'Today’s Aces':'Today’s Leader';
+    $('leader-name').textContent=leaders[0]?.name||'No scores yet';
+    $('leader-detail').textContent=counts[0]>1?counts[0]+' players tied with an ace':
+        leaders.length?(counts[0]?'Hole in one':scoreText(leaders[0])+' to the pin'):'Play today’s challenge to set the first mark.';
+    $('player-count').textContent=total+' '+(total===1?'player':'players')+' · one best score each';
+    $('score-bands').replaceChildren(...scoreBands.map((label,index)=>{
+        const li=document.createElement('li'),name=document.createElement('span');
+        const bar=document.createElement('meter'),count=document.createElement('span');
+        name.textContent=label;count.textContent=counts[index];
+        bar.max=Math.max(1,total);bar.value=counts[index];
+        bar.setAttribute('aria-label',label+': '+counts[index]);
+        li.append(name,bar,count);return li;
+    }));
+    $('rank-table').hidden=!leaders.length;
+    $('board-empty').hidden=!!leaders.length;
+    let rank=0,last;
+    $('rank-rows').replaceChildren(...leaders.map((score,index)=>{
+        if(!last||score.ace!==last.ace||score.mm!==last.mm)rank=index+1;
+        last=score;
+        const row=document.createElement('tr');
+        for(const value of [rank,score.name,scoreText(score)]){
+            const cell=document.createElement('td');cell.textContent=value;row.append(cell);
+        }
+        return row;
+    }));
+}
+function describeBoard(state){
+    boardState=state;
+    $('board-source').textContent=state==='online'?'Shared leaderboard · Resets at midnight Eastern':
+        state==='loading'?'Checking the shared leaderboard…':'Local leaderboard · Saved on this browser';
+    if(visibleResult&&savingResult!==visibleResult)$('post-score').textContent=state==='online'&&visibleResult.day===dayKey()?'Post score':'Save locally';
+}
+async function refreshWelcome(){
+    const day=dayKey(),target=challengeFor(day),tee=tees[target.tee],request=++boardRequest;
+    boardDate=day;
+    const weather=target.mph?target.mph+' mph · '+windDirections[target.dir].toLowerCase():'Calm';
+    $('welcome-setup').textContent=names[target.tee]+' tee · '+yards(flatDistance(tee,target.cup))+' yd · '+pinNames[target.pin]+' pin · '+weather;
+    if(leaderEndpoint){
+        describeBoard('loading');
+        try{
+            const response=await fetch(leaderEndpoint,{cache:'no-store',signal:AbortSignal.timeout(4500)});
+            if(!response.ok)throw Error('Shared board unavailable');
+            const board=await response.json();
+            if(board.day!==day||!Array.isArray(board.leaders)||board.counts?.length!==5)throw Error('Unexpected board');
+            if(request===boardRequest){describeBoard('online');renderScoreboard(board);}
+            return;
+        }catch{}
+    }
+    if(request===boardRequest){describeBoard('local');renderScoreboard(localBoard(day));}
+}
+function openGame(wantsDaily){
+    if(!rendererAttempted){
+        rendererAttempted=true;
+        try{renderer=makeRenderer(canvas,map);}catch(error){renderError=error.message;}
+    }
+    $('welcome').hidden=true;$('game-screen').hidden=false;
+    daily=wantsDaily;previousClub=null;previousAim=null;presetPower=1;
+    reset();$('back-home').focus();
+}
+function backToWelcome(){
+    if(active()||flyover)return;
+    cancel();$('game-screen').hidden=true;$('welcome').hidden=false;
+    $('welcome-title').focus();refreshWelcome();
+}
+function hideDailyResult(){
+    visibleResult=null;pendingShot=null;$('daily-result').hidden=true;
+    $('post-status').textContent='';$('post-score').disabled=false;
+}
+function showDailyResult(result){
+    visibleResult=result;
+    $('daily-result').hidden=false;$('score-form').hidden=!result;
+    $('result-title').textContent=result?(result.ace?'Hole in one!':leave(result.distance)+' to the pin'):
+        ball.mode==='water'?'In the water':'Out of play';
+    $('player-name').value=readBrowser('springhaven-player-name')||'';
+    $('post-score').textContent=boardState==='online'&&result?.day===dayKey()?'Post score':'Save locally';
+    $('post-status').textContent=result?'':'Try again to post an in-play shot.';
+    $('result-title').focus({preventScroll:true});
+    $('daily-result').scrollIntoView({block:'nearest'});
+}
+async function submitResult(event){
+    event.preventDefault();
+    const score=visibleResult,name=$('player-name').value.trim().replace(/\s+/g,' ');
+    if(!score||savingResult||!name||name.length>28)return;
+    const message=$('post-status');
+    savingResult=score;$('post-score').disabled=true;
+    try{
+        if(boardState==='online'&&score.day===dayKey()){
+            let player=readBrowser('springhaven-player-id');
+            if(!player){
+                player=Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+                if(!saveBrowser('springhaven-player-id',player))throw Error('Allow browser storage to keep one result per player.');
+            }
+            const response=await fetch(leaderEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name,player,day:score.day,club:score.club,power:score.power,heading:score.heading}),
+                signal:AbortSignal.timeout(8000)});
+            const posted=await response.json();
+            if(!response.ok)throw Error(posted.error||'Could not post the score.');
+            saveBrowser('springhaven-player-name',name);
+            if(visibleResult===score){
+                message.textContent=posted.improved?'Score posted · '+scoreText(posted):'Your earlier score is still your best.';
+                $('score-form').hidden=true;
+            }
+        }else{
+            const key='springhaven-posted-'+score.day,earlier=readBrowser(key);
+            const record={name,mm:Math.round(score.distance*1000),ace:score.ace};
+            const improved=!earlier||Number(record.ace)>Number(earlier.ace)||record.ace===earlier.ace&&record.mm<earlier.mm;
+            if(improved&&!saveBrowser(key,record))throw Error('This browser could not save the score.');
+            saveBrowser('springhaven-player-name',name);
+            if(visibleResult===score){
+                message.textContent=improved?'Best score saved on this browser.':'Your earlier local score is still your best.';
+                $('score-form').hidden=true;
+            }
+        }
+    }catch(error){
+        if(visibleResult===score)message.textContent=error.name==='TimeoutError'||error.name==='TypeError'?'Could not reach the leaderboard. Try posting again.':error.message;
+    }finally{
+        if(visibleResult===score)$('post-score').disabled=false;
+        savingResult=null;
+    }
+}
+$('open-daily').onclick=()=>openGame(true);
+$('open-practice').onclick=()=>openGame(false);
+$('back-home').onclick=$('result-home').onclick=backToWelcome;
+$('result-retry').onclick=()=>{reset();$('hit').focus();};
+$('score-form').onsubmit=submitResult;
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('welcome').hidden)refreshWelcome();});
+setInterval(()=>{if(!$('welcome').hidden&&boardDate!==dayKey())refreshWelcome();},15000);
+
 reset();
-if(renderer)requestAnimationFrame(frame);
+requestAnimationFrame(frame);
+refreshWelcome();
 
 </script></body></html>
