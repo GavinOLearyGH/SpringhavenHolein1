@@ -92,7 +92,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <p><strong>Daily Challenge · Hole 6</strong><br><span id="welcome-setup"></span></p>
 <div class="welcome-actions"><button id="open-daily" class="primary">Play the Daily Challenge</button><button id="open-practice">Practise</button></div>
 </div>
-<p id="board-source" class="board-source" role="status"></p>
+<div class="welcome-actions board-source"><span id="board-source" role="status"></span><button id="refresh-scores" type="button" hidden>Refresh scores</button></div>
 <div class="welcome-grid">
 <section class="welcome-panel" aria-labelledby="leader-title"><h2 id="leader-title">Today’s Leader</h2><p id="leader-name" class="leader-name"></p><p id="leader-detail" class="leader-detail"></p></section>
 <section class="welcome-panel" aria-labelledby="distribution-title"><h2 id="distribution-title">Score Distribution</h2><p id="player-count" class="subtle"></p><ul id="score-bands" class="score-bands"></ul></section>
@@ -1650,6 +1650,8 @@ function frame(now){
 
 const scoreBands=['Ace','Inside 3 ft','3–under 10 ft','10–under 25 ft','25 ft or more'];
 const leaderEndpoint=location.protocol==='file:'?null:new URL('api/leaderboard',location.href);
+const githubTest=location.hostname==='gavinolearygh.github.io'&&location.pathname.startsWith('/SpringhavenHolein1/');
+const githubBoard='https://raw.githubusercontent.com/GavinOLearyGH/SpringhavenHolein1/main/leaderboard/results.json';
 let pendingShot=null,visibleResult=null,savingResult=null,boardState='loading',boardDate='',boardRequest=0;
 function readBrowser(key){
     try{return JSON.parse(localStorage.getItem(key));}catch{return null;}
@@ -1695,15 +1697,39 @@ function renderScoreboard(board){
 function describeBoard(state){
     boardState=state;
     $('board-source').textContent=state==='online'?'Shared leaderboard · Resets at midnight Eastern':
+        state==='github'?'Shared leaderboard · GitHub submissions · Resets at midnight Eastern':
         state==='loading'?'Checking the shared leaderboard…':'Local leaderboard · Saved on this browser';
-    if(visibleResult&&savingResult!==visibleResult)$('post-score').textContent=state==='online'&&visibleResult.day===dayKey()?'Post score':'Save locally';
+    $('refresh-scores').hidden=state!=='github';
+    if(visibleResult&&savingResult!==visibleResult)labelPostButton(visibleResult);
+}
+function labelPostButton(result){
+    const shared=result?.day===dayKey();
+    $('post-score').textContent=shared&&boardState==='github'?'Post via GitHub':
+        shared&&boardState==='online'?'Post score':'Save locally';
+    if(shared&&boardState==='github'&&!$('score-form').hidden&&!$('post-status').textContent){
+        $('post-status').textContent='GitHub sign-in required. Your score and display name will be public.';
+    }
 }
 async function refreshWelcome(){
     const day=dayKey(),target=challengeFor(day),tee=tees[target.tee],request=++boardRequest;
     boardDate=day;
     const weather=target.mph?target.mph+' mph · '+windDirections[target.dir].toLowerCase():'Calm';
     $('welcome-setup').textContent=names[target.tee]+' tee · '+yards(flatDistance(tee,target.cup))+' yd · '+pinNames[target.pin]+' pin · '+weather;
-    if(leaderEndpoint){
+    if(githubTest){
+        describeBoard('loading');
+        try{
+            const response=await fetch(githubBoard+'?t='+Math.floor(Date.now()/1000),
+                {cache:'no-store',signal:AbortSignal.timeout(4500)});
+            if(!response.ok)throw Error('Shared board unavailable');
+            const board=await response.json();
+            if(!Array.isArray(board.leaders)||board.counts?.length!==5)throw Error('Unexpected board');
+            if(request===boardRequest){
+                describeBoard('github');
+                renderScoreboard(board.day===day?board:{total:0,counts:[0,0,0,0,0],leaders:[]});
+            }
+            return;
+        }catch{}
+    }else if(leaderEndpoint){
         describeBoard('loading');
         try{
             const response=await fetch(leaderEndpoint,{cache:'no-store',signal:AbortSignal.timeout(4500)});
@@ -1740,8 +1766,8 @@ function showDailyResult(result){
     $('result-title').textContent=result?(result.ace?'Hole in one!':leave(result.distance)+' to the pin'):
         ball.mode==='water'?'In the water':'Out of play';
     $('player-name').value=readBrowser('springhaven-player-name')||'';
-    $('post-score').textContent=boardState==='online'&&result?.day===dayKey()?'Post score':'Save locally';
     $('post-status').textContent=result?'':'Try again to post an in-play shot.';
+    labelPostButton(result);
     $('result-title').focus({preventScroll:true});
     $('daily-result').scrollIntoView({block:'nearest'});
 }
@@ -1750,6 +1776,15 @@ async function submitResult(event){
     const score=visibleResult,name=$('player-name').value.trim().replace(/\s+/g,' ');
     if(!score||savingResult||!name||name.length>28)return;
     const message=$('post-status');
+    if(boardState==='github'&&score.day===dayKey()){
+        const url=new URL('https://github.com/GavinOLearyGH/SpringhavenHolein1/issues/new');
+        url.searchParams.set('title','Today’s Ace score');
+        url.searchParams.set('body',JSON.stringify({day:score.day,name,club:score.club,power:score.power,heading:score.heading}));
+        window.open(url.href,'_blank','noopener,noreferrer');
+        saveBrowser('springhaven-player-name',name);
+        message.textContent='Select Submit new issue on GitHub. Then return to the welcome page and refresh to check your score.';
+        return;
+    }
     savingResult=score;$('post-score').disabled=true;
     try{
         if(boardState==='online'&&score.day===dayKey()){
@@ -1791,6 +1826,7 @@ $('open-practice').onclick=()=>openGame(false);
 $('back-home').onclick=$('result-home').onclick=backToWelcome;
 $('result-retry').onclick=()=>{reset();$('hit').focus();};
 $('score-form').onsubmit=submitResult;
+$('refresh-scores').onclick=refreshWelcome;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('welcome').hidden)refreshWelcome();});
 setInterval(()=>{if(!$('welcome').hidden&&boardDate!==dayKey())refreshWelcome();},15000);
 
