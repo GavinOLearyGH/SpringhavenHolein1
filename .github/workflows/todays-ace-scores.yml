@@ -3,6 +3,11 @@ on:
   issues:
     types: [opened]
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/todays-ace-scores.yml'
+      - 'leaderboard/github-board.mjs'
 
 permissions:
   contents: write
@@ -14,7 +19,7 @@ concurrency:
 
 jobs:
   score:
-    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == 'Today’s Ace score'
+    if: github.event_name != 'issues' || github.event.issue.title == 'Today’s Ace score'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
