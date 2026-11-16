@@ -33,8 +33,10 @@ button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-vi
 header{align-items:center}.mode-buttons{display:flex;gap:.35rem}.mode-buttons button[aria-pressed=true],#retry{background:var(--gold);color:#252517;font-weight:750}
 .context{display:flex;gap:.6rem;justify-content:space-between;align-items:center;margin:0 0 .6rem;color:var(--muted);font-size:.84rem}
 #wind-arrow{display:inline-block;font-size:1.2em;line-height:1;margin-right:.24rem}
-#club{width:136px}.aim-buttons{display:flex;gap:.35rem}.aim-buttons button{width:44px;padding:0}
-#power-wrap{max-width:none}.shot-controls{display:grid;grid-template-columns:auto auto minmax(100px,1fr) minmax(120px,.7fr);align-items:end}
+#club{width:136px}
+#hit.pulling{background:#ffe9b2;box-shadow:0 0 0 2px #f5d48955}
+#aim-offset{white-space:nowrap}
+#power-wrap{max-width:none}.shot-controls{display:grid;grid-template-columns:auto minmax(125px,1fr) minmax(155px,.7fr);align-items:end}
 #hit{min-height:48px}.status-row{align-items:center;min-height:44px}.status-row strong{white-space:normal}
 details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:pointer;min-height:32px;padding-top:.35rem}
 .fine button{min-width:44px}.settings{border-top:1px solid var(--line);margin-top:.5rem}.settings select{max-width:100%}
@@ -44,34 +46,32 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   .mode-buttons button{padding:.35rem .47rem;font-size:.84rem}.context{font-size:.76rem}
   #course{height:clamp(260px,48svh,490px)}.stage-hud{left:6px;top:6px;max-width:63%}.stage-hud>span{font-size:.72rem;padding:.3rem .42rem}
   .map-card{right:6px;top:6px;width:34%;padding:3px}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
-  .shot-controls{grid-template-columns:minmax(90px,1fr) auto minmax(112px,1.2fr);padding:.58rem 0;align-items:center}
-  .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}.aim-buttons button{width:42px}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
+  .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
+  .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
   #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1}
   .status-row{gap:.45rem;font-size:.84rem}#retry{padding:.45rem .55rem}.info{font-size:.78rem}
 }
-@media(max-width:360px){.aim-buttons button{width:38px}.shot-controls{grid-template-columns:minmax(76px,1fr) auto minmax(105px,1.2fr)}}
 </style></head>
 <body><main>
 <header><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practice</button></div></header>
 <div class="context"><span id="setup-name"></span><span id="daily-best"></span></div>
 <div class="stage" aria-label="First-person view of Hole 6">
-<canvas id="course" aria-label="Drag left or right to aim" role="img"></canvas>
-<div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span></div>
+<canvas id="course" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
+<div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span><span id="aim-offset" hidden></span></div>
 <div class="map-card"><canvas id="map" width="510" height="165" aria-label="Hole overview with ball, aim and flag"></canvas></div>
 <div id="aim-ring" hidden></div><div id="ball-marker" hidden></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
 </div>
 <div class="controls shot-controls" aria-label="Shot controls">
 <label>Club · carry<select id="club"></select></label>
-<div class="aim-buttons"><button id="aim-left" aria-label="Aim left">←</button><button id="aim-right" aria-label="Aim right">→</button></div>
-<button id="hit" aria-describedby="controls-guide">Pull &amp; release</button>
+<button id="hit" aria-describedby="controls-guide">Pull back to swing</button>
 <label id="power-wrap"><span id="power-label">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <details id="fine"><summary>Fine aim and power</summary><div class="controls fine">
 <button id="fine-left" aria-label="Nudge aim left">←</button><button id="fine-right" aria-label="Nudge aim right">→</button>
 <button id="power-down" aria-label="Decrease preset power">−</button><button id="power-up" aria-label="Increase preset power">+</button>
-<button id="hit-preset">Hit set shot</button> <span id="aim-offset"></span>
+<button id="hit-preset">Hit set shot</button>
 </div></details>
 <div id="practice-settings" class="controls settings" aria-label="Practice settings" hidden>
 <label>Tee<select id="tee"><option value="back">Back</option><option value="middle" selected>Middle</option><option value="forward">Forward</option></select></label>
@@ -82,7 +82,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="sidehill">Sidehill putt</option><option value="short">Short putt</option></select></label>
 <button id="reset">Reset</button>
 </div>
-<div class="info" id="controls-guide"><span>Drag the view to aim. Pull down from the ball or shot button, then release.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
+<div class="info" id="controls-guide"><span>Pull down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
 <div class="info">Tee markers are based on scorecard yardages. Green contours and pin locations are provisional.</div>
 </main><script>
 const scale = 0.153;
@@ -528,7 +528,7 @@ function makeRenderer(canvas,map){
         const width=Math.round(canvas.clientWidth*ratio),height=Math.round(canvas.clientHeight*ratio);
         const still=ball.mode==='rest'||ball.mode==='holed'||ball.mode==='water'||ball.mode==='out';
         if(still){
-            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,trail.length].join();
+            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,aim?.pulling,trail.length].join();
             if(lastStatic===view)return;
             lastStatic=view;
         }else lastStatic=null;
@@ -547,7 +547,21 @@ function makeRenderer(canvas,map){
         disk(moving,pin.x,base+.012,pin.z,cupRadius,[.09,.13,.08]);
         post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
         triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
-        if(aim)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
+        if(aim){
+            disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
+            if(aim.pulling){
+                const dx=Math.cos(aim.heading),dz=Math.sin(aim.heading);
+                const length=Math.min(aim.distance,aim.near?5:14),width=aim.near?.019:.037;
+                for(let start=.23;start<length;start+=aim.near?.28:1.05){
+                    const end=Math.min(length,start+(aim.near?.17:.66));
+                    const stripe=(distance,side)=>{
+                        const x=ball.x+dx*distance-dz*side,z=ball.z+dz*distance+dx*side;
+                        return [x,ground(x,z)+.035,z];
+                    };
+                    quad(moving,stripe(start,-width),stripe(start,width),stripe(end,width),stripe(end,-width),[.99,.85,.51]);
+                }
+            }
+        }
         if(ball.mode!=='holed'){
             const size=flying?.076:ball.mode==='drop'?ballRadius:.046;
             const y=ball.y+(ball.mode==='rest'?.023:0);
@@ -672,7 +686,7 @@ function reset(){
         surface(ball.x,ball.z)==='green'?'Putter':!daily&&$('practice').value==='bank'?'SW':suggested;
     if(daily&&previousAim!==null)heading=previousAim;
     setPower($('fine').open?presetPower:0);
-    status.textContent=renderer?'Aim, then pull back and release.':renderError;
+    status.textContent=renderer?'Pull back to set your shot.':renderError;
     updateHUD();
 }
 function showWind(){
@@ -703,7 +717,9 @@ function updateHUD(){
     $('lie').textContent=lieNames[lie]||'Rough';
     showWind();
     const offset=(heading-angleTo(ball,settings.pin))*180/Math.PI;
-    $('aim-offset').textContent=editable()?(Math.abs(offset)<.007?'Aim on pin':Math.abs(offset).toFixed(2)+'° '+(offset>0?'right':'left')+' of pin'):'';
+    $('aim-offset').hidden=!editable();
+    $('aim-offset').textContent=Math.abs(offset)<.007?'On pin':Math.abs(offset).toFixed(2)+'° '+(offset>0?'right':'left')+' of pin';
+    $('hit').classList.toggle('pulling',drag?.kind==='shot');
     $('carry').hidden=!Number.isFinite(carry);
     if(Number.isFinite(carry))$('carry').textContent='Wall · '+yards(carry)+' yd';
     const isPutting=editable()&&lie==='green';
@@ -722,7 +738,7 @@ function updateHUD(){
     $('practice-mode').setAttribute('aria-pressed',String(!daily));
     $('daily').disabled=$('practice-mode').disabled=active();
     $('practice-settings').hidden=daily;
-    for(const name of ['club','aim-left','aim-right','hit','fine-left','fine-right','power-down','power-up','hit-preset'])$(name).disabled=!editable()||!renderer;
+    for(const name of ['club','hit','fine-left','fine-right','power-down','power-up','hit-preset'])$(name).disabled=!editable()||!renderer;
     for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset'])$(name).disabled=active();
     drawMap();
 }
@@ -756,42 +772,76 @@ function aimBy(radians){
     updateHUD();
 }
 function beginDrag(event,kind){
-    if(!editable()||drag||keyTime!==null||event.button>0)return;
+    if(!editable()||!renderer||drag||keyTime!==null||event.button>0)return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    if(kind==='power')presetActive=false;
-    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind};
+    const room=(window.visualViewport?.height||window.innerHeight||800)-event.clientY-14;
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind,charge,
+        travel:clamp(room,126,210)};
+    if(kind==='shot'){
+        setPower(0);
+        updateHUD();
+    }
 }
 canvas.addEventListener('pointerdown',event=>{
     const p=renderer?.project(ball.x,ball.y+.022,ball.z),rect=canvas.getBoundingClientRect();
     const onBall=p&&Math.hypot(p.x+rect.x-event.clientX,p.y+rect.y-event.clientY)<42;
-    beginDrag(event,onBall?'power':'aim');
+    beginDrag(event,onBall?'shot':'aim');
 });
-$('hit').addEventListener('pointerdown',event=>beginDrag(event,'power'));
+$('hit').addEventListener('pointerdown',event=>beginDrag(event,'shot'));
 function cancel(){
-    drag=null;keyTime=null;setPower(0);
+    if(drag){
+        const {aim,charge:priorPower}=drag;
+        drag=null;
+        heading=aim;
+        setPower(priorPower);
+        updateHUD();
+    }
+    if(keyTime!==null){
+        keyTime=null;
+        setPower(0);
+    }
+}
+function previewDrag(event){
+    const dx=event.clientX-drag.x;
+    let turn;
+    if(drag.kind==='shot'){
+        // A broad pull gives more turn while the first few pixels allow fine aim.
+        const width=Math.abs(dx);
+        turn=-Math.sign(dx)*(.00025*width+.000014*Math.max(0,width-16)**2);
+        turn=clamp(turn,-.48,.48);
+        const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
+        // Give high-power shots more physical travel for precise distance control.
+        setPower(depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
+    }else{
+        turn=dx*($('club').value==='Putter'?.0018:.001);
+    }
+    const base=angleTo(ball,settings.pin);
+    heading=base+quantize(drag.aim-base+turn,aimStep);
 }
 for(const element of [canvas,$('hit')]){
     element.addEventListener('pointermove',event=>{
         if(drag?.id!==event.pointerId)return;
-        if(drag.kind==='aim'){
-            heading=drag.aim+(event.clientX-drag.x)*($('club').value==='Putter'?.0018:.001);
-            const base=angleTo(ball,settings.pin);
-            heading=base+quantize(heading-base,aimStep);
-            updateHUD();
-        }else setPower((event.clientY-drag.y)/132);
+        previewDrag(event);
+        updateHUD();
     });
     element.addEventListener('pointerup',event=>{
         if(drag?.id!==event.pointerId)return;
-        const kind=drag.kind;drag=null;
-        if(kind==='power')shoot();
+        previewDrag(event);
+        if(drag.kind==='shot'){
+            if(event.clientY-drag.y<8){cancel();return;}
+            drag=null;
+            presetActive=false;
+            shoot();
+        }else{
+            drag=null;
+            updateHUD();
+        }
     });
     element.addEventListener('pointercancel',event=>{if(drag?.id===event.pointerId)cancel();});
     element.addEventListener('lostpointercapture',event=>{if(drag?.id===event.pointerId)cancel();});
 }
 const aimIncrement=()=>$('club').value==='Putter'?.007:.005;
-$('aim-left').onclick=()=>aimBy(-aimIncrement());
-$('aim-right').onclick=()=>aimBy(aimIncrement());
 window.addEventListener('keydown',event=>{
     if(event.code==='Escape'){cancel();return;}
     if(event.target.matches?.('input,select,button') && !(event.target===$('hit')&&event.code==='Space'))return;
@@ -894,20 +944,21 @@ function frame(now){
         return;
     }
     const following=active()&&now-shotStarted>300&&ball.mode!=='drop';
-    const h=active()?shotHeading:heading;
+    const pulling=drag?.kind==='shot';
+    const h=active()?shotHeading:pulling?drag.aim:heading;
     const forwardX=Math.cos(h),forwardZ=Math.sin(h),near=$('club').value==='Putter';
     const back=following?5.7:near?1.8:2.5;
     const ex=ball.x-forwardX*back,ez=ball.z-forwardZ*back;
     const ey=following?Math.max(ground(ex,ez)+2.2,ball.y-1.2):ground(ball.x,ball.z)+(near?1.2:1.62);
     const aimDist=near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
-    const aimX=clamp(ball.x+forwardX*aimDist,0,courseWidth),aimZ=clamp(ball.z+forwardZ*aimDist,0,courseDepth);
+    const aimX=clamp(ball.x+Math.cos(heading)*aimDist,0,courseWidth),aimZ=clamp(ball.z+Math.sin(heading)*aimDist,0,courseDepth);
     const desiredEye=[ex,ey,ez];
     const desiredTarget=following?[ball.x+forwardX*6,ball.y-.05,ball.z+forwardZ*6]:
         [ball.x+forwardX*(near?5.5:14),ground(ball.x,ball.z)-(near?1.18:.9),ball.z+forwardZ*(near?5.5:14)];
     const smooth=following?1-Math.exp(-dt*9):1;
     eye=eye?eye.map((n,i)=>mix(n,desiredEye[i],smooth)):desiredEye;
     target=target?target.map((n,i)=>mix(n,desiredTarget[i],smooth)):desiredTarget;
-    const aim=editable()?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near}:null;
+    const aim=editable()?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near,pulling,heading,distance:aimDist}:null;
     renderer.frame(eye,target,settings.pin,ball,aim,trail,h,following);
     showMarker($('aim-ring'),aim?renderer.project(aim.x,aim.y+.09,aim.z):null);
     showMarker($('ball-marker'),editable()?renderer.project(ball.x,ball.y+.022,ball.z):null);
