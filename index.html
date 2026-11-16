@@ -32,6 +32,9 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 button,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:.55rem .75rem;min-height:42px}
 button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #hit{background:var(--gold);color:#252517;font-weight:750;touch-action:none;min-width:150px}
+#power-label{overflow-wrap:anywhere}
+#green-grid{position:absolute;left:12px;bottom:12px;min-height:40px;padding:.4rem .6rem;background:#142018ec;color:#fff;font-size:.82rem}
+#green-grid[aria-pressed=true]{color:var(--gold);border-color:#f5d48988}
 #power-wrap{max-width:195px;flex:1 1 130px}progress{width:100%;height:12px;accent-color:var(--gold)}
 #landing-feedback{margin:0;color:var(--muted);font-size:.84rem}
 #status{flex:1;margin:0;min-height:1.5rem;align-self:center}
@@ -56,7 +59,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   #flyover{top:6px;right:6px;min-height:42px}.map-card{right:6px;top:53px;height:min(206px,calc(100% - 61px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
   .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
   .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
-  #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1}
+  #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1;min-width:62px}
   .status-row{gap:.45rem;font-size:.84rem}#retry{padding:.45rem .55rem}.info{font-size:.78rem}
 }
 </style></head>
@@ -71,12 +74,13 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div id="aim-ring" hidden></div><div id="ball-marker" hidden></div>
 <div id="pull-aim" hidden aria-hidden="true"></div><div id="pull-tether" hidden aria-hidden="true"></div><div id="pull-handle" hidden aria-hidden="true"></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
+<button id="green-grid" type="button" aria-pressed="true" title="Moving marks show the local downhill direction." hidden>Green grid</button>
 <div id="flyover-fade" hidden aria-hidden="true"></div>
 </div>
 <div class="controls shot-controls" aria-label="Shot controls">
 <label>Club · carry<select id="club"></select></label>
 <button id="hit" aria-describedby="controls-guide">Pull back to swing</button>
-<label id="power-wrap"><span id="power-label">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
+<label id="power-wrap"><span id="power-label" title="Flat roll estimates distance on level ground at the selected green speed.">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <p id="landing-feedback" role="status" hidden></p>
@@ -89,7 +93,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <label>Tee<select id="tee"><option value="back">Back</option><option value="middle" selected>Middle</option><option value="forward">Forward</option></select></label>
 <label>Wind direction<select id="wind"></select></label>
 <label>Wind speed<select id="wind-speed"><option value="0">Calm</option><option value="5">5 mph</option><option value="8">8 mph</option><option value="12">12 mph</option></select></label>
-<label>Practice pin<select id="pin"><option value="middle">Middle</option><option value="front">Front</option><option value="back">Back</option></select></label>
+<label>Practice pin<select id="pin"></select></label>
 <label>Green speed<select id="green-speed"><option value="0.8">Slow</option><option value="1" selected>Medium</option><option value="1.24">Fast</option></select></label>
 <label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="wedge">Fairway wedge</option><option value="bunker">Bunker</option><option value="sidehill">Sidehill putt</option><option value="ridge">Across the ridge</option><option value="short">Short putt</option></select></label>
 <button id="reset">Reset</button>
@@ -178,9 +182,15 @@ for(const name of bag.slice(0,-1)){
         else high=club.launch;
     }
 }
+function putterSpeed(power){
+    return mix(clubs.Putter.minimum,clubs.Putter.speed,power**1.12);
+}
+function flatPuttRoll(power,greenSpeed){
+    return power<.025?0:putterSpeed(power)**2*greenSpeed/(2*surfaces.green.brake);
+}
 function strike(point,ground,club,power,heading,lie){
     const config=clubs[club],putt=club==='Putter';
-    const speed=putt?mix(config.minimum,config.speed,power**1.12):config.speed*(.12+.88*power**.87);
+    const speed=putt?putterSpeed(power):config.speed*(.12+.88*power**.87);
     const loftedWedge=config.loft>=33;
     const fromSand=lie==='sand',fromRough=lie==='rough';
     const penalty=putt?1:fromSand?(loftedWedge?.74:.49):fromRough?.87:1;
@@ -398,7 +408,11 @@ const greenComplex={
     outline:"M1128 179Q1134 164 1147 161L1198 160Q1219 162 1243 179L1272 191Q1298 204 1303 231Q1308 257 1303 282Q1296 306 1273 317Q1253 324 1217 322Q1185 322 1158 311Q1143 301 1143 274Q1141 252 1129 228Q1117 209 1128 179Z",
     frame:{front:[1122,242],back:[1306,242],width:164},
     center:[1215,242],
-    pinLocations:{front:[1165,243],middle:[1226,242],back:[1263,244]},
+    pinLocations:{
+        frontLeft:[1154,193],front:[1165,243],frontRight:[1169,282],
+        middleLeft:[1214,200],middle:[1226,242],middleRight:[1245,279],
+        backLeft:[1255,213],back:[1263,244],backRight:[1278,280]
+    },
     tiers:{datum:-.18,backRise:.24,rightRise:.035,frontLeftFall:.135,
         ridge:{depth:[.35,.37,.66],rise:.23,width:.22}},
     // A surveyed green can supply elevations in metres instead of estimated tiers.
@@ -653,13 +667,50 @@ function makeRenderer(canvas,map){
     const normalize=v=>{const length=Math.hypot(...v);return v.map(n=>n/length);};
     const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const dot=(a,b)=>a.reduce((sum,n,i)=>sum+n*b[i],0);
+    function greenLine(mesh,x,z,dx,dz,halfWidth,height,shade){
+        const size=Math.hypot(dx,dz),sideX=-dz/size*halfWidth,sideZ=dx/size*halfWidth;
+        const point=(t,side)=>{
+            const px=x+t*dx+side*sideX,pz=z+t*dz+side*sideZ;
+            return [px,ground(px,pz)+height,pz];
+        };
+        quad(mesh,point(0,-1),point(0,1),point(1,1),point(1,-1),shade);
+    }
+    function makePuttingGrid(){
+        const {front,back,width}=greenComplex.frame,pad=width*scale/2;
+        const spacing=.5,cells=4,mesh=[],streams=[],sample=.07;
+        const x0=Math.floor((Math.min(front[0],back[0])*scale-pad)/spacing);
+        const x1=Math.ceil((Math.max(front[0],back[0])*scale+pad)/spacing);
+        const z0=Math.floor((Math.min(front[1],back[1])*scale-pad)/spacing);
+        const z1=Math.ceil((Math.max(front[1],back[1])*scale+pad)/spacing);
+        const onGreen=(x,z)=>surface(x,z)==='green';
+        const lineColor=[.50,.64,.35];
+        for(let i=x0;i<=x1;i++)for(let j=z0;j<=z1;j++){
+            const row=i%cells===0,col=j%cells===0;
+            if(!row&&!col)continue;
+            const x=i*spacing,z=j*spacing;
+            if(!onGreen(x,z))continue;
+            if(col&&onGreen(x+spacing,z))greenLine(mesh,x,z,spacing,0,.018,.018,lineColor);
+            if(row&&onGreen(x,z+spacing))greenLine(mesh,x,z,0,spacing,.018,.018,lineColor);
+            if(!row||!col)continue;
+            const gx=(ground(x+sample,z)-ground(x-sample,z))/(2*sample);
+            const gz=(ground(x,z+sample)-ground(x,z-sample))/(2*sample);
+            const grade=Math.hypot(gx,gz);
+            if(grade<.0015)continue;
+            const dx=-gx/grade,dz=-gz/grade;
+            if(onGreen(x-dx*.6,z-dz*.6)&&onGreen(x+dx*.6,z+dz*.6)){
+                streams.push({x,z,dx,dz,period:mix(54,19,clamp(grade/.06,0,1)),phase:(i*17+j*11)%37/37});
+            }
+        }
+        return {mesh:buffer(mesh),streams};
+    }
+    let puttingGrid;
     let camera,lastStatic;
-    function frame(eye,target,pin,ball,aim,trail,heading,flying){
+    function frame(eye,target,pin,ball,aim,trail,heading,flying,gridTick=null){
         const ratio=Math.min(devicePixelRatio||1,1.6);
         const width=Math.round(canvas.clientWidth*ratio),height=Math.round(canvas.clientHeight*ratio);
         const still=ball.mode==='rest'||ball.mode==='holed'||ball.mode==='water'||ball.mode==='out';
         if(still){
-            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,trail.length].join();
+            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,trail.length,gridTick].join();
             if(lastStatic===view)return;
             lastStatic=view;
         }else lastStatic=null;
@@ -675,6 +726,16 @@ function makeRenderer(canvas,map){
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
         draw(groundBuffer,1);draw(waterBuffer,2);draw(solidBuffer,0);
         const moving=[],base=ground(pin.x,pin.z);
+        if(gridTick!==null){
+            puttingGrid??=makePuttingGrid();
+            draw(puttingGrid.mesh,0);
+            for(const {x,z,dx,dz,period,phase} of puttingGrid.streams){
+                const t=(gridTick/period+phase)%1;
+                const span=(t-.5)*1.03,light=Math.sin(Math.PI*t);
+                const shade=[mix(.54,.98,light),mix(.67,1,light),mix(.37,.76,light)];
+                greenLine(moving,x+span*dx,z+span*dz,dx*.13,dz*.13,.025,.026,shade);
+            }
+        }
         disk(moving,pin.x,base+.012,pin.z,cupRadius,[.09,.13,.08]);
         post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
         triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
@@ -709,6 +770,7 @@ function makeRenderer(canvas,map){
 const $=id=>document.getElementById(id);
 const canvas=$('course'), mapCanvas=$('map'), status=$('status');
 const ballMarker=$('ball-marker'),pullHandle=$('pull-handle'),pullTether=$('pull-tether'),pullAim=$('pull-aim');
+const gridButton=$('green-grid');
 const flyButton=$('flyover'),flyFade=$('flyover-fade');
 const map=atlas(),mapContext=mapCanvas.getContext('2d');
 const mapBounds={x:55,z:59,length:1295,width:411};
@@ -726,6 +788,9 @@ const yards=metres=>Math.round(metres/0.9144);
 const feet=metres=>Math.round(metres/0.3048);
 const settings={pin:pins.middle,wind:windPresets.calm,greenSpeed:1,tee:tees.middle};
 const names={back:'Back',middle:'Middle',forward:'Forward',front:'Front'};
+const pinNames={frontLeft:'Front left',front:'Front center',frontRight:'Front right',
+    middleLeft:'Middle left',middle:'Middle center',middleRight:'Middle right',
+    backLeft:'Back left',back:'Back center',backRight:'Back right'};
 // Eastern time gives all players the same course setup for the club's calendar day.
 const dateParts=new Intl.DateTimeFormat('en',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
 function dayKey(now=new Date()){
@@ -764,6 +829,8 @@ function addOptions(id,items){
 }
 addOptions('club',bag.map(name=>[name,clubs[name].carry?name+' · '+clubs[name].carry+' yd':name]));
 addOptions('wind',windDirections.map((name,index)=>[index,name]));
+addOptions('pin',Object.keys(pins).map(key=>[key,pinNames[key]]));
+$('pin').value='middle';
 let daily=true,currentDay='',challenge,stats,finished=false,presetPower=1,presetActive=false,previousClub=null,previousAim=null;
 const quantize=(value,step)=>Math.round(value/step)*step;
 function applyMode(){
@@ -783,7 +850,7 @@ function setMode(isDaily){
 }
 let heading=0,ball,strokeFrom,shotHeading,stroke=0,penalties=0,trail=[],charge=0,drag=null,keyTime=null;
 let eye,target,lastTime=0,accumulator=0,trailTime=0,shotStarted=0;
-let mapTrail=[],waterMark=null,flyover=null;
+let mapTrail=[],waterMark=null,flyover=null,showGreenGrid=true;
 const active=()=>['air','roll','drop'].includes(ball.mode);
 const editable=()=>ball.mode==='rest'&&!finished&&!flyover;
 const flatDistance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -804,7 +871,17 @@ function practicePoint(){
 function setPower(fraction){
     charge=quantize(clamp(fraction,0,1),powerStep);
     $('power').value=charge*100;
-    $('power-label').textContent='Power · '+Number((charge*100).toFixed(2))+'%';
+    renderPowerLabel();
+}
+function renderPowerLabel(){
+    if($('club').value!=='Putter'||!ball){
+        $('power-label').textContent='Power · '+Number((charge*100).toFixed(2))+'%';
+        return;
+    }
+    const roll=flatPuttRoll(charge,settings.greenSpeed)/.3048;
+    const cup=flatDistance(ball,settings.pin)/.3048;
+    const format=value=>value<10?Number(value.toFixed(1)):Math.round(value);
+    $('power-label').textContent=format(cup)+' ft to cup · '+format(roll)+' ft flat roll';
 }
 function reset(){
     applyMode();
@@ -860,7 +937,10 @@ function updateHUD(){
     if(!pulling)pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;
     $('carry').hidden=!Number.isFinite(carry);
     if(Number.isFinite(carry))$('carry').textContent='Wall · '+yards(carry)+' yd';
-    const isPutting=editable()&&lie==='green';
+    const isPutting=editable()&&lie==='green'&&$('club').value==='Putter';
+    gridButton.hidden=!isPutting;
+    gridButton.setAttribute('aria-pressed',String(showGreenGrid));
+    renderPowerLabel();
     $('slope').hidden=!isPutting;
     if(isPutting){
         const ahead=(ground(ball.x+Math.cos(heading)*.2,ball.z+Math.sin(heading)*.2)-ground(ball.x,ball.z))/.2;
@@ -1000,7 +1080,7 @@ function previewDrag(event){
         const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
         drag.depth=depth;
         // Give high-power shots more physical travel for precise distance control.
-        setPower(depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
+        setPower($('club').value==='Putter'?depth:depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
     }else{
         turn=dx*($('club').value==='Putter'?.0018:.001);
     }
@@ -1051,6 +1131,10 @@ window.addEventListener('blur',cancel);
 $('pin').onchange=$('tee').onchange=$('practice').onchange=reset;
 for(const id of ['wind','wind-speed','green-speed'])$(id).onchange=()=>{applyMode();updateHUD();};
 $('club').onchange=updateHUD;
+gridButton.onclick=()=>{
+    showGreenGrid=!showGreenGrid;
+    updateHUD();
+};
 $('reset').onclick=$('retry').onclick=reset;
 $('daily').onclick=()=>setMode(true);
 $('practice-mode').onclick=()=>setMode(false);
@@ -1243,7 +1327,8 @@ function frame(now){
     eye=eye?eye.map((n,i)=>mix(n,desiredEye[i],smooth)):desiredEye;
     target=target?target.map((n,i)=>mix(n,desiredTarget[i],smooth)):desiredTarget;
     const aim=editable()&&!pulling?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near}:null;
-    renderer.frame(eye,target,settings.pin,ball,aim,trail,h,following);
+    const gridTick=showGreenGrid&&editable()&&near&&surface(ball.x,ball.z)==='green'?Math.floor(now/50):null;
+    renderer.frame(eye,target,settings.pin,ball,aim,trail,h,following,gridTick);
     showMarker($('aim-ring'),aim?renderer.project(aim.x,aim.y+.09,aim.z):null);
     const anchor=editable()?renderer.project(ball.x,ball.y+.022,ball.z):null;
     showMarker(ballMarker,anchor);
