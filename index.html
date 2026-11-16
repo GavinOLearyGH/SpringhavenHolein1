@@ -237,6 +237,39 @@ function crossing(a,b,c,d){
     return t>0&&t<=1&&u>=0&&u<=1?t:null;
 }
 
+function surroundGrade(surface,ground,x,z,floor,dx,dz){
+    const sample=.045;
+    const ahead=surface(x+dx*sample,z+dz*sample)==='surround';
+    const behind=surface(x-dx*sample,z-dz*sample)==='surround';
+    if(!ahead&&!behind)return 0;
+    const high=ahead?ground(x+dx*sample,z+dz*sample):floor;
+    const low=behind?ground(x-dx*sample,z-dz*sample):floor;
+    return clamp((high-low)/(sample*(Number(ahead)+Number(behind))),-4,4);
+}
+function landOnSurround(ball,surface,ground,floor){
+    const {x,z,vx,vy,vz}=ball;
+    const gx=surroundGrade(surface,ground,x,z,floor,1,0);
+    const gz=surroundGrade(surface,ground,x,z,floor,0,1);
+    const normalLength=Math.hypot(gx,1,gz);
+    const nx=-gx/normalLength,ny=1/normalLength,nz=-gz/normalLength;
+    const approach=vx*nx+vy*ny+vz*nz;
+    // The tangent carries the shot along the slope. The normal gives it clearance.
+    const tx=vx-approach*nx,ty=vy-approach*ny,tz=vz-approach*nz;
+    const impact=Math.max(0,-approach);
+    const spin=ball.spin||0;
+    const steep=ease((impact/Math.max(.01,Math.hypot(tx,ty,tz))-.20)/.8);
+    const check=steep*clamp(.42+.45*spin,0,1);
+    const surround=surfaces.surround;
+    const retained=Math.min(1,surround.forward*(ball.roll||1)*mix(.90,.49,check));
+    const rebound=impact*surround.bounce*mix(1,.76,check);
+    ball.vx=tx*retained+nx*rebound;
+    ball.vz=tz*retained+nz*rebound;
+    ball.vy=ty*retained+ny*rebound;
+    ball.firstLie??='surround';
+    ball.y=floor+ballRadius;
+    ball.spin=spin*.60;
+    if(rebound*normalLength<.48){ball.mode='roll';ball.vy=0;}
+}
 function land(ball,lie,surface,ground,from,floor){
     const material=surfaces[lie]||surfaces.rough;
     const horizontal=Math.hypot(ball.vx,ball.vz);
@@ -248,8 +281,6 @@ function land(ball,lie,surface,ground,from,floor){
         bounce=mix(bounce,.17,shallow);
     }else if(lie==='fairway'||lie==='tee'){
         forward*=mix(1.04,.94,ease(descent));
-    }else if(lie==='surround'){
-        forward*=mix(.86,1,ease(descent/.62));
     }else if(lie==='green'){
         const firstGreen=!ball.greenContact;
         const ux=horizontal>.001?ball.vx/horizontal:0,uz=horizontal>.001?ball.vz/horizontal:0;
@@ -273,13 +304,19 @@ function land(ball,lie,surface,ground,from,floor){
         }
     }
     const fromSand=surface(from.x,from.z)==='sand';
+    let hitBunkerLip=false;
     if(fromSand||lie==='sand'){
         const span=Math.hypot(ball.x-from.x,ball.z-from.z);
-        if(span>.001&&(floor-ground(from.x,from.z))/span>.23){
+        hitBunkerLip=span>.001&&(floor-ground(from.x,from.z))/span>.23;
+        if(hitBunkerLip){
             ball.bunkerLip=true;
             forward=-Math.min(forward,.16);
             bounce=Math.min(bounce,.12);
         }
+    }
+    if(lie==='surround'&&!hitBunkerLip){
+        landOnSurround(ball,surface,ground,floor);
+        return;
     }
     const retained=Math.min(1,forward*(ball.roll||1));
     ball.firstLie??=fromSand&&ball.bunkerLip?'sand':lie;
