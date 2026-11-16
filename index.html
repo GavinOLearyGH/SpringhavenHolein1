@@ -357,9 +357,12 @@ function resolveFastPutt(ball,from,pin,speed){
 }
 function advance(ball, course, settings, dt=stepTime){
     ball.time+=dt;
-    const {ground,surface,wall,waterHeight}=course;
+    const {ground,surface,wall,waterHeight,bridgeHeight,terrainGround,terrainSurface}=course;
     const {pin,wind,greenSpeed}=settings;
     const from={x:ball.x,y:ball.y,z:ball.z};
+    const deckBefore=bridgeHeight?.(from.x,from.z);
+    const rollsUnderDeck=ball.mode==='roll'&&deckBefore!==undefined&&from.y-ballRadius<deckBefore-.025;
+    const rollingGround=rollsUnderDeck?terrainGround:ground;
     let rollingLie;
     if(ball.mode==='drop'){
         ball.y-=dt*.55;
@@ -370,12 +373,12 @@ function advance(ball, course, settings, dt=stepTime){
         flightStep(ball,wind,dt);
     } else if(ball.mode==='roll'){
         const sample=.07;
-        const gradeX=(ground(ball.x+sample,ball.z)-ground(ball.x-sample,ball.z))/(sample*2);
-        const gradeZ=(ground(ball.x,ball.z+sample)-ground(ball.x,ball.z-sample))/(sample*2);
+        const gradeX=(rollingGround(ball.x+sample,ball.z)-rollingGround(ball.x-sample,ball.z))/(sample*2);
+        const gradeZ=(rollingGround(ball.x,ball.z+sample)-rollingGround(ball.x,ball.z-sample))/(sample*2);
         ball.vx-=7*clamp(gradeX,-.55,.55)*dt;
         ball.vz-=7*clamp(gradeZ,-.55,.55)*dt;
         const pace=Math.hypot(ball.vx,ball.vz);
-        rollingLie=surface(ball.x,ball.z);
+        rollingLie=(rollsUnderDeck?terrainSurface:surface)(ball.x,ball.z);
         const base=(surfaces[rollingLie]||surfaces.rough).brake;
         const remaining=Math.max(0,pace-(rollingLie==='green'?base/greenSpeed:base)*dt);
         if(remaining<.023){ball.mode='rest';return;}
@@ -384,7 +387,12 @@ function advance(ball, course, settings, dt=stepTime){
     } else return;
     ball.x+=ball.vx*dt;
     ball.z+=ball.vz*dt;
-    ball.y=ball.mode==='air'?ball.y+ball.vy*dt:ground(ball.x,ball.z)+ballRadius;
+    const deckAhead=bridgeHeight?.(ball.x,ball.z);
+    if(rollingLie==='bridge'&&deckAhead===undefined&&ground(ball.x,ball.z)<from.y-ballRadius-.09){
+        ball.mode='air';
+        ball.vy=0;
+    }
+    ball.y=ball.mode==='air'?ball.y+ball.vy*dt:rollingGround(ball.x,ball.z)+ballRadius;
 
     if(Math.min(from.y,ball.y)<1&&Math.max(from.x,ball.x)>=1019*scale&&Math.min(from.x,ball.x)<=1122*scale&&
         Math.max(from.z,ball.z)>=220*scale&&Math.min(from.z,ball.z)<=360*scale){
@@ -437,8 +445,13 @@ function advance(ball, course, settings, dt=stepTime){
             ball.flag=true;
         }
     }
-    const lie=surface(ball.x,ball.z);
-    const floor=ground(ball.x,ball.z);
+    const deck=bridgeHeight?.(ball.x,ball.z);
+    const underDeck=deck!==undefined&&(rollsUnderDeck||
+        (ball.mode==='air'&&from.y-ballRadius<(deckBefore??deck)-.015));
+    const lieAt=underDeck?terrainSurface:surface;
+    const groundAt=underDeck?terrainGround:ground;
+    const lie=lieAt(ball.x,ball.z);
+    const floor=groundAt(ball.x,ball.z);
     if(lie==='water'&&ball.y-ballRadius<=waterHeight){
         ball.mode='water';
         return;
@@ -448,7 +461,7 @@ function advance(ball, course, settings, dt=stepTime){
         ball.vz*=surfaces[lie].entry;
     }
     if(ball.mode==='air'&&ball.y<=floor+ballRadius){
-        land(ball,lie,surface,ground,from,floor);
+        land(ball,lie,lieAt,groundAt,from,floor);
     }
     ball.cupCooldown-=dt;
     if(pin&&ball.putted&&ball.cupExitPending&&
@@ -496,7 +509,7 @@ const greenComplex={
 const pins=Object.fromEntries(Object.entries(greenComplex.pinLocations)
     .map(([name,[x,z]])=>[name,{x:x*scale,z:z*scale}]));
 const greenCenter={x:greenComplex.center[0]*scale,z:greenComplex.center[1]*scale};
-const shapes = {"teeArea": "M120 253Q121 229 151 229L224 230Q252 215 291 216L371 216Q410 209 451 212L523 212Q570 212 586 230Q605 245 605 265L605 302Q602 328 558 335Q445 344 327 337Q231 331 150 312Q113 307 120 253Z", "tee": "M139 254L380 243L381 297L141 309Z M459 239L577 235L581 286L464 290Z", "fairway": "M730 271Q734 228 757 211Q778 199 797 188Q814 179 843 178L934 178Q945 185 954 202L981 235Q996 258 997 291Q997 339 984 366Q976 382 958 380Q895 382 827 367Q776 357 747 331Q724 313 730 271Z", "surround": "M1031 191Q1040 148 1102 129Q1167 113 1210 127Q1274 143 1304 185Q1334 211 1321 281Q1313 318 1273 337L1266 344L1264 374Q1240 399 1189 393Q1156 393 1142 371L1135 344Q1119 327 1117 302Q1112 250 1088 228Q1071 208 1039 202Z", "water": "M943 116Q954 111 965 130Q978 148 988 170Q1000 194 1019 218Q1031 224 1062 223Q1100 225 1112 245Q1118 256 1117 279L1119 313Q1119 333 1104 345Q1095 353 1081 359Q1062 338 1047 310Q1030 281 1011 258Q991 234 976 214Q953 193 948 159Z", "wall": "M1021 222Q1047 221 1063 222Q1098 223 1112 242Q1120 253 1118 279L1120 314Q1120 332 1107 344Q1097 354 1082 359", "bridge": "M968 184L988 168L1002 185L981 202Z", "green": greenComplex.outline, "sand": "M1147 337Q1151 322 1164 325Q1175 326 1186 337Q1193 347 1207 342Q1223 338 1229 351Q1235 367 1221 378Q1209 386 1180 381Q1155 377 1148 366Q1142 355 1147 337Z"};
+const shapes = {"teeArea": "M120 253Q121 229 151 229L224 230Q252 215 291 216L371 216Q410 209 451 212L523 212Q570 212 586 230Q605 245 605 265L605 302Q602 328 558 335Q445 344 327 337Q231 331 150 312Q113 307 120 253Z", "tee": "M139 254L380 243L381 297L141 309Z M459 239L577 235L581 286L464 290Z", "fairway": "M730 271Q734 228 757 211Q778 199 797 188Q814 179 843 178L934 178Q945 185 954 202L981 235Q996 258 997 291Q997 339 984 366Q976 382 958 380Q895 382 827 367Q776 357 747 331Q724 313 730 271Z", "surround": "M1031 191Q1040 148 1102 129Q1167 113 1210 127Q1274 143 1304 185Q1334 211 1321 281Q1313 318 1273 337L1266 344L1264 374Q1240 399 1189 393Q1156 393 1142 371L1135 344Q1119 327 1117 302Q1112 250 1088 228Q1071 208 1039 202Z", "water": "M943 116Q954 111 965 130Q978 148 988 170Q1000 194 1019 218Q1031 224 1062 223Q1100 225 1112 245Q1118 256 1117 279L1119 313Q1119 333 1104 345Q1095 353 1081 359Q1062 338 1047 310Q1030 281 1011 258Q991 234 976 214Q953 193 948 159Z", "wall": "M1021 222Q1047 221 1063 222Q1098 223 1112 242Q1120 253 1118 279L1120 314Q1120 332 1107 344Q1097 354 1082 359", "green": greenComplex.outline, "sand": "M1147 337Q1151 322 1164 325Q1175 326 1186 337Q1193 347 1207 342Q1223 338 1229 351Q1235 367 1221 378Q1209 386 1180 381Q1155 377 1148 366Q1142 355 1147 337Z"};
 const path = Object.fromEntries(Object.entries(shapes).map(([k,d])=>[k,new Path2D(d)]));
 const mask=document.createElement('canvas').getContext('2d');
 const palette={rough:'#4e6c40',teeArea:'#577b46',tee:'#78a66b',fairway:'#7da65c',
@@ -520,9 +533,9 @@ const bunkerEdge=Array.from({length:97},(_,i)=>{
 });
 vector.remove();
 const waterHeight=-3.45;
-function surface(x,z){
+function terrainSurface(x,z){
     const px=x/scale,pz=z/scale;
-    for(const key of ['bridge','water','sand','green','tee','fairway','surround']){
+    for(const key of ['water','sand','green','tee','fairway','surround']){
         if(mask.isPointInPath(path[key],px,pz))return key;
     }
     return 'rough';
@@ -567,8 +580,7 @@ function bunkerDepth(px,pz){
 function baseGround(x,z){
     const px=x/scale,pz=z/scale;
     if(px<615)return .08*Math.sin(pz*.025)*ease((615-px)/100);
-    const lie=surface(x,z);
-    if(lie==='bridge')return -1.5;
+    const lie=terrainSurface(x,z);
     if(lie==='water')return waterHeight-.16;
     if(lie==='green')return greenHeight(x,z);
     let bank=-3.37*ease((px-610)/430);
@@ -608,10 +620,10 @@ for(let i=0;i<wall.length;i++){
     const bankTop=waterHeight+.07;
     p.top=mix(bankTop,Math.max(bankTop,p.shoulder),taper);
 }
-function ground(x,z){
+function terrainGround(x,z){
     const height=baseGround(x,z),width=1.45;
     if(x<1019*scale-width||x>1122*scale+width||z<220*scale-width||
-        z>360*scale+width||surface(x,z)==='water')return height;
+        z>360*scale+width||terrainSurface(x,z)==='water')return height;
     let best=width**2,crest,shoulder,side,aroundEnd;
     for(let i=1;i<wall.length;i++){
         const a=wall[i-1],b=wall[i],dx=b.x-a.x,dz=b.z-a.z;
@@ -631,13 +643,40 @@ function ground(x,z){
     const grade=mix(crest,shoulder,ease(distance));
     return mix(height,grade,retainedSide*(1-ease((distance-.65)/.35)));
 }
-const course={ground,surface,wall,waterHeight};
+const bridge={x:972*scale,z:179*scale,ux:.91,uz:-Math.sqrt(1-.91**2),
+    start:-24*scale,end:27*scale,halfWidth:8*scale,crown:.88};
+function bridgePoint(t,width){
+    const d=mix(bridge.start,bridge.end,t);
+    return {x:bridge.x+bridge.ux*d-bridge.uz*width,z:bridge.z+bridge.uz*d+bridge.ux*width};
+}
+const bridgeCorners=[bridgePoint(0,-bridge.halfWidth),bridgePoint(1,-bridge.halfWidth),
+    bridgePoint(1,bridge.halfWidth),bridgePoint(0,bridge.halfWidth)];
+path.bridge=new Path2D(bridgeCorners.map((p,i)=>(i?'L':'M')+p.x/scale+' '+p.z/scale).join('')+'Z');
+const bridgeBank=bridgeCorners.map(p=>terrainGround(p.x,p.z));
+function bridgeDeck(t,width){
+    const side=(width/bridge.halfWidth+1)/2;
+    const near=mix(bridgeBank[0],bridgeBank[3],side);
+    const far=mix(bridgeBank[1],bridgeBank[2],side);
+    return mix(near,far,t)+bridge.crown*Math.sin(Math.PI*t)**2;
+}
+function bridgeHeight(x,z){
+    const dx=x-bridge.x,dz=z-bridge.z;
+    const d=dx*bridge.ux+dz*bridge.uz,width=-dx*bridge.uz+dz*bridge.ux;
+    const tolerance=1e-7;
+    if(d<bridge.start-tolerance||d>bridge.end+tolerance||Math.abs(width)>bridge.halfWidth+tolerance)return;
+    return bridgeDeck(clamp((d-bridge.start)/(bridge.end-bridge.start),0,1),
+        clamp(width,-bridge.halfWidth,bridge.halfWidth));
+}
+function ground(x,z){return bridgeHeight(x,z)??terrainGround(x,z);}
+function surface(x,z){return bridgeHeight(x,z)===undefined?terrainSurface(x,z):'bridge';}
+const course={ground,surface,wall,waterHeight,bridgeHeight,terrainGround,terrainSurface};
 
 function atlas(){
     const canvas=document.createElement('canvas');
     canvas.width=1400;canvas.height=500;
     const ctx=canvas.getContext('2d');
     for(const key of Object.keys(palette)){
+        if(key==='bridge')continue;
         ctx.fillStyle=palette[key];
         if(key==='rough')ctx.fillRect(0,0,1400,500);
         else ctx.fill(path[key]);
@@ -772,8 +811,32 @@ function makeRenderer(canvas,map){
         quad(mesh,turfEdge(a,0),turfEdge(b,0),turfEdge(b,.42),turfEdge(a,.42),[.97,.97,.97]);
         quad(mesh,turfEdge(a,.42),turfEdge(b,.42),turfEdge(b,.82),turfEdge(a,.82),[.97,.97,.97]);
     }
-    const bridgePoints=[[968,184],[988,168],[1002,185],[981,202]].map(([x,z])=>[x*scale,-1.45,z*scale]);
-    quad(solid,...bridgePoints,[.58,.51,.41]);
+    const bridgeStone=[.68,.66,.61],bridgeEdge=[.78,.76,.70];
+    const deckPoint=(t,w,dy)=>{
+        const p=bridgePoint(t,w);
+        return [p.x,bridgeDeck(t,w)+dy,p.z];
+    };
+    const across=bridge.halfWidth,edge=.16;
+    for(let i=0;i<24;i++){
+        const a=i/24,b=(i+1)/24;
+        const shade=bridgeStone.map(c=>c*(i%2?.97:1));
+        quad(solid,deckPoint(a,-across,0),deckPoint(b,-across,0),
+            deckPoint(b,across,0),deckPoint(a,across,0),shade);
+        quad(solid,deckPoint(a,-across,-.29),deckPoint(b,-across,-.29),
+            deckPoint(b,across,-.29),deckPoint(a,across,-.29),[.48,.47,.43]);
+        for(const side of [-1,1]){
+            const w=side*across,inner=side*(across-edge);
+            quad(solid,deckPoint(a,w,-.29),deckPoint(b,w,-.29),deckPoint(b,w,.045),deckPoint(a,w,.045),shade);
+            quad(solid,deckPoint(a,w,.045),deckPoint(b,w,.045),
+                deckPoint(b,inner,.045),deckPoint(a,inner,.045),bridgeEdge);
+            quad(solid,deckPoint(a,inner,0),deckPoint(b,inner,0),
+                deckPoint(b,inner,.045),deckPoint(a,inner,.045),bridgeEdge);
+        }
+    }
+    for(const t of [0,1]){
+        quad(solid,deckPoint(t,-across,-.29),deckPoint(t,across,-.29),
+            deckPoint(t,across,0),deckPoint(t,-across,0),bridgeStone);
+    }
     for(const [oldX,oldZ,h] of [[19,15,7],[31,18,8],[51,13,10],[76,16,8],[88,11,9],[102,14,8],[118,14,8],
         [145,13,10],[148,20,11],[154,30,10],[153,41,10],[143,47,8],[129,49,8],[116,50,6],
         [101,47,7],[83,48,8],[65,46,8],[42,49,7],[25,45,8],[15,45,7]]){
@@ -912,6 +975,12 @@ const backdrop=mapBackdrop.getContext('2d');
 backdrop.translate(0,mapHeight);
 backdrop.rotate(-Math.PI/2);
 backdrop.drawImage(map,mapBounds.x,mapBounds.z,mapBounds.length,mapBounds.width,0,0,mapHeight,mapWidth);
+backdrop.save();
+backdrop.scale(mapHeight/mapBounds.length,mapWidth/mapBounds.width);
+backdrop.translate(-mapBounds.x,-mapBounds.z);
+backdrop.fillStyle=palette.bridge;
+backdrop.fill(path.bridge);
+backdrop.restore();
 let renderer,renderError;
 try {renderer=makeRenderer(canvas,map);}
 catch(error){renderError=error.message;}
