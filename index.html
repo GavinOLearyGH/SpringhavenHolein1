@@ -391,7 +391,12 @@ function advance(ball, course, settings, dt=stepTime){
         for(let i=1;i<wall.length;i++){
             const a=wall[i-1],b=wall[i];
             const t=crossing(from,ball,a,b);
-            if(t===null||mix(from.y,ball.y,t)-ballRadius>mix(a.top,b.top,.5))continue;
+            if(t===null)continue;
+            const dx=b.x-a.x,dz=b.z-a.z;
+            const x=mix(from.x,ball.x,t),z=mix(from.z,ball.z,t);
+            const at=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);
+            const y=mix(from.y,ball.y,t);
+            if(y-ballRadius>mix(a.top,b.top,at)||y+ballRadius<waterHeight)continue;
             let nx=b.z-a.z,nz=a.x-b.x;
             const size=Math.hypot(nx,nz);
             nx/=size;nz/=size;
@@ -505,7 +510,7 @@ document.body.append(vector);
 const wallLength=svgPath.getTotalLength();
 const wall=Array.from({length:70},(_,i)=>{
     const p=svgPath.getPointAtLength(wallLength*i/69);
-    return {x:p.x*scale,z:p.y*scale,top: -.18-2.6*ease((i/69-.72)/.28)};
+    return {x:p.x*scale,z:p.y*scale};
 });
 svgPath.setAttribute('d',shapes.sand);
 const bunkerLength=svgPath.getTotalLength();
@@ -559,7 +564,7 @@ function bunkerDepth(px,pz){
     }
     return .55*ease(Math.sqrt(closestSquared)*scale/1.7);
 }
-function ground(x,z){
+function baseGround(x,z){
     const px=x/scale,pz=z/scale;
     if(px<615)return .08*Math.sin(pz*.025)*ease((615-px)/100);
     const lie=surface(x,z);
@@ -590,6 +595,41 @@ function ground(x,z){
     }
     const high=greenHeight(x,z);
     return mix(bank,high,rise)-(lie==='sand'?bunkerDepth(px,pz):0);
+}
+// Fit the stone crest to the grass uphill of the wall, then feather both ends
+// into the pond bank. Arc-length samples give the ends independent tapers.
+for(let i=0;i<wall.length;i++){
+    const p=wall[i],a=wall[Math.max(0,i-1)],b=wall[Math.min(wall.length-1,i+1)];
+    const length=Math.hypot(b.x-a.x,b.z-a.z);
+    p.nx=(b.z-a.z)/length;
+    p.nz=(a.x-b.x)/length;
+    p.shoulder=baseGround(p.x+p.nx*1.45,p.z+p.nz*1.45);
+    const taper=ease(i/27)*ease((wall.length-1-i)/17);
+    const bankTop=waterHeight+.07;
+    p.top=mix(bankTop,Math.max(bankTop,p.shoulder),taper);
+}
+function ground(x,z){
+    const height=baseGround(x,z),width=1.45;
+    if(x<1019*scale-width||x>1122*scale+width||z<220*scale-width||
+        z>360*scale+width||surface(x,z)==='water')return height;
+    let best=width**2,crest,shoulder,side,aroundEnd;
+    for(let i=1;i<wall.length;i++){
+        const a=wall[i-1],b=wall[i],dx=b.x-a.x,dz=b.z-a.z;
+        const t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);
+        const ox=x-mix(a.x,b.x,t),oz=z-mix(a.z,b.z,t);
+        const distance=ox*ox+oz*oz;
+        if(distance>=best)continue;
+        best=distance;
+        crest=mix(a.top,b.top,t);
+        side=ox*mix(a.nx,b.nx,t)+oz*mix(a.nz,b.nz,t);
+        shoulder=mix(a.shoulder,b.shoulder,t);
+        aroundEnd=(i===1&&t===0)||(i===wall.length-1&&t===1);
+    }
+    if(crest===undefined)return height;
+    const retainedSide=aroundEnd?ease((side+.45)/.45):side>=-.015?1:0;
+    const distance=Math.sqrt(best)/width;
+    const grade=mix(crest,shoulder,ease(distance));
+    return mix(height,grade,retainedSide*(1-ease((distance-.65)/.35)));
 }
 const course={ground,surface,wall,waterHeight};
 
@@ -717,10 +757,20 @@ function makeRenderer(canvas,map){
         for(let j=0;j<5;j++){
             const c=.30+.075*((i*7+j*11)%5)/4;
             const bottom=waterHeight+j*(a.top-waterHeight)/5;
-            const top=waterHeight+(j+1)*(a.top-waterHeight)/5-.023;
+            const top=waterHeight+(j+1)*(a.top-waterHeight)/5;
             quad(solid,[a.x,bottom,a.z],[b.x,waterHeight+j*(b.top-waterHeight)/5,b.z],
-                [b.x,waterHeight+(j+1)*(b.top-waterHeight)/5-.023,b.z],[a.x,top,a.z],[c+.055,c+.025,c]);
+                [b.x,waterHeight+(j+1)*(b.top-waterHeight)/5,b.z],[a.x,top,a.z],[c+.055,c+.025,c]);
         }
+    }
+    // Anchor the narrow edge of the grass to the stone between terrain grid points.
+    const turfEdge=(p,d)=>{
+        const x=p.x+p.nx*d,z=p.z+p.nz*d;
+        return [x,d===0?p.top:Math.max(waterHeight,ground(x,z))+.008,z];
+    };
+    for(let i=1;i<wall.length;i++){
+        const a=wall[i-1],b=wall[i];
+        quad(mesh,turfEdge(a,0),turfEdge(b,0),turfEdge(b,.42),turfEdge(a,.42),[.97,.97,.97]);
+        quad(mesh,turfEdge(a,.42),turfEdge(b,.42),turfEdge(b,.82),turfEdge(a,.82),[.97,.97,.97]);
     }
     const bridgePoints=[[968,184],[988,168],[1002,185],[981,202]].map(([x,z])=>[x*scale,-1.45,z*scale]);
     quad(solid,...bridgePoints,[.58,.51,.41]);
