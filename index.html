@@ -20,22 +20,22 @@ const toM=y=>y*.9144,greenZ=toM(yard);
 // Aerial-derived topology (not survey dimensions): pond front-left, elevated green right,
 // curved masonry edge facing pond, bunker right/back.
 const greenX=12,greenCenterZ=greenZ+1,pondZ=greenZ-8;
-const pondOutline=[[-54,greenZ-34],[-47,greenZ-31],[-41,greenZ-24],[-37,greenZ-18],[-31,greenZ-15],[-26,greenZ-8],[-25,greenZ+1],[-29,greenZ+10],[-38,greenZ+14],[-47,greenZ+10],[-52,greenZ+1],[-56,greenZ-13]];
+const pondOutline=[[34,greenZ-34],[42,greenZ-32],[49,greenZ-27],[54,greenZ-19],[57,greenZ-8],[55,greenZ+3],[49,greenZ+12],[41,greenZ+14],[36,greenZ+9],[35,greenZ+1],[37,greenZ-8],[34,greenZ-17]];
 function inPolygon(x,z,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){let a=poly[i],b=poly[j];if(((a[1]>z)!==(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))inside=!inside}return inside}
 const pondFootprint=(x,z)=>inPolygon(x,z,pondOutline);
 const greenFootprint=(x,z)=>(((x-greenX)/24)**2+((z-greenCenterZ)/19)**2)<=1;
 const bunkerFootprint=(x,z)=>(((x-39)/10)**2+((z-greenZ-8)/7)**2)<=1;
-function wallFrontZ(x){return greenZ-11+3*Math.pow((x+26)/30,2)}
+function wallFrontZ(x){return greenZ-11+3*Math.pow((x-32)/30,2)}
 function height(x,z){
  const approach=.20*Math.sin(z*.025)+.14*Math.sin(x*.052);
  // Green shelf rises behind the pond-side retaining wall, not across the full fairway.
  const front=wallFrontZ(x);
  const shelf=2.2/(1+Math.exp(-(z-front)*.13));
- const leftDrop=1/(1+Math.exp(-(x+17)*.18));
+ const leftDrop=1/(1+Math.exp((x-31)*.18));
  const basin=0; // Continuous terrain: avoid vertical tears at the pond polygon boundary.
  return approach+shelf*(1-.75*leftDrop)+Math.max(0,z/greenZ)*.25+basin;
 }
-const pondSurfaceY=height(-44,pondZ)-.25;
+const pondSurfaceY=height(46,pondZ)-.25;
 const wallTopY=x=>height(x,wallFrontZ(x))+.15;
 function mesh(geometry,mat,x=0,y=0,z=0){let m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);m.receiveShadow=true;scene.add(m);return m}
 let terrain=new THREE.PlaneGeometry(350,Math.max(480,greenZ+260),65,95);terrain.rotateX(-Math.PI/2);let pos=terrain.attributes.position;for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i)+greenZ*.55;pos.setY(i,height(x,z))}terrain.computeVertexNormals();mesh(terrain,rough,0,0,greenZ*.55);
@@ -58,14 +58,14 @@ const pondWaterMaterial=new THREE.MeshBasicMaterial({color:0x246e83,transparent:
 pond.material=pondWaterMaterial;
 // Recess water below approach level, but above excavated basin.
 const waterPositions=pond.geometry.attributes.position;for(let i=0;i<waterPositions.count;i++)waterPositions.setY(i,pondSurfaceY);pond.geometry.computeVertexNormals();
-const wallCurve=[];for(let i=0;i<=28;i++){let x=-38+i*.72,z=wallFrontZ(x);wallCurve.push(new THREE.Vector3(x,wallTopY(x),z))}
+const wallCurve=[];for(let i=0;i<=28;i++){let x=27+i*.72,z=wallFrontZ(x);wallCurve.push(new THREE.Vector3(x,wallTopY(x),z))}
 const wallFace=material(0x99968b),wallCap=material(0xbab5a6);
 for(let i=0;i<28;i++){const p=wallCurve[i],q=wallCurve[i+1],dx=q.x-p.x,dz=q.z-p.z,len=Math.hypot(dx,dz);
  let block=mesh(new THREE.BoxGeometry(len+.12,4.4,1.5),wallFace,(p.x+q.x)/2,(p.y+q.y)/2-2.15,(p.z+q.z)/2);
  block.rotation.y=-Math.atan2(dz,dx);
  let cap=mesh(new THREE.BoxGeometry(len+.18,.24,1.9),wallCap,(p.x+q.x)/2,(p.y+q.y)/2+.08,(p.z+q.z)/2);cap.rotation.y=block.rotation.y;
 }
-const fx=-24,fz=pondZ-4;
+const fx=45,fz=pondZ-4;
 for(let i=0;i<3;i++){const ring=mesh(new THREE.TorusGeometry(1.2+i*1.4,.09,6,48),new THREE.MeshBasicMaterial({color:0xbce9ee,transparent:true,opacity:.8}),fx,pondSurfaceY+.1,fz);ring.rotation.x=Math.PI/2}
 const spray=mesh(new THREE.ConeGeometry(1.4,4.4,16,1,true),new THREE.MeshBasicMaterial({color:0xd7f8fc,transparent:true,opacity:.6,side:THREE.DoubleSide}),fx,pondSurfaceY+2.1,fz);spray.rotation.z=Math.PI;
 // Right cart path curves behind the green.
@@ -124,7 +124,7 @@ function setCamera(){
   // Camera translates straight down the tee-to-pin axis. No lateral tracking.
   const camZ=phase==='flying'&&shot?Math.max(-12,shot.ball.z-42):-12;
   // Scene is mirrored on X, so camera tracks the displayed (mirrored) ball X.
-  const camX=phase==='flying'&&shot?-shot.ball.x*.92:0;
+  const camX=phase==='flying'&&shot?shot.ball.x*.92:0;
   camera.position.set(camX,12+progress*3,camZ);
   // Keep ball near screen center during flight; do not pan away from the target.
   const focusZ=phase==='flying'&&shot?Math.max(shot.ball.z+30,camZ+45):greenZ*.95;
