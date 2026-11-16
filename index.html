@@ -1,211 +1,82 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#0b211c"><title>Springhaven Six · Daily Ace</title>
-<style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;font-family:system-ui,-apple-system,sans-serif;color:#f5f4eb;background:#10291e}button{font:inherit;cursor:pointer}#app{position:relative;width:100%;height:100dvh;overflow:hidden}#course{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;background:#5b8d62}#hud{position:absolute;z-index:3;left:12px;top:calc(12px + env(safe-area-inset-top));display:flex;gap:8px;align-items:flex-start;pointer-events:none}.stat{background:#fffef4ed;color:#122b1c;border-radius:14px;padding:11px 13px;box-shadow:0 3px 16px #0002;min-width:100px}.stat small{display:block;color:#637367;font-size:11px;font-weight:700;letter-spacing:.06em}.stat b{display:block;font-size:22px;letter-spacing:-.04em}.stat span{font-size:11px;color:#607465}.wind{display:flex;align-items:center;gap:8px}.arrow{font-size:31px;display:inline-block;color:#32885a;line-height:1}#topright{position:absolute;right:12px;top:calc(12px + env(safe-area-inset-top));z-index:5;display:flex;flex-direction:column;gap:8px}#topright button{border:0;border-radius:13px;background:#fffef4e8;color:#153023;font-size:21px;font-weight:700;width:48px;height:46px;box-shadow:0 3px 16px #0002}#title{position:absolute;top:calc(137px + env(safe-area-inset-top));left:12px;z-index:2;background:#09291db8;border-radius:10px;padding:7px 10px;font-size:10px;letter-spacing:.15em;color:#e7d5a4;font-weight:800}#bottom{position:absolute;z-index:4;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));background:#f7f7efeF;border-radius:17px;padding:9px;color:#153023;box-shadow:0 7px 25px #0004}#clubs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}#clubs::-webkit-scrollbar{display:none}.club{flex:1;min-width:52px;border:0;border-radius:10px;background:#e1e5dc;padding:10px 4px;color:#193629;font-size:14px;font-weight:750}.club small{display:block;font-size:10px;font-weight:500;color:#617064;margin-top:3px}.club.active{background:#28734f;color:white}.club.active small{color:#d6e8dc}#choices{display:flex;align-items:center;justify-content:center;gap:8px;padding-top:8px}#choices button{border:0;border-radius:9px;background:#e2e6dd;color:#153023;padding:8px 11px;font-weight:750}#choices span{font-size:12px;font-weight:700;min-width:60px;text-align:center}#choices .sep{height:22px;width:1px;background:#bac5ba;margin:0 3px}#instruction{position:absolute;z-index:4;bottom:calc(153px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);white-space:nowrap;max-width:94%;padding:10px 15px;border-radius:20px;background:#0b2b21cf;font-size:12px;text-align:center;color:#fff}#power{position:absolute;z-index:3;right:15px;top:40%;height:28%;width:20px;border-radius:15px;background:linear-gradient(to top,#4dbe8a,#f4d26e,#e7564c);border:2px solid #fff9;box-shadow:0 2px 12px #0004}#powerFill{position:absolute;bottom:0;left:0;right:0;height:0;background:#ffffffa0;border-radius:10px}#powerLabel{position:absolute;right:8px;top:calc(68% + 10px);z-index:3;font-weight:800;font-size:14px;color:#fff;text-shadow:0 2px 5px #000}#result{position:absolute;z-index:6;left:16px;right:16px;top:50%;transform:translateY(-50%);padding:22px;border-radius:19px;background:#0b2c22f0;border:1px solid #a3b99d;box-shadow:0 20px 65px #0008;text-align:center;display:none}#result h2{font-size:32px;margin:8px 0}#result p{color:#c1d5c7}#result button,.modal button.action{width:100%;border:0;background:#e3c98f;color:#173326;border-radius:11px;padding:14px;font-weight:800;margin-top:10px}#result button.secondary{background:#244e3c;color:white;border:1px solid #749b80}.modal{display:none;position:absolute;z-index:10;inset:0;background:#0a201bf5;padding:calc(40px + env(safe-area-inset-top)) 22px 20px;overflow:auto}.modal.open{display:block}.modal h2{margin:20px 0 10px}.modal p{line-height:1.6;color:#c6d5ca}.modal button.close{position:absolute;right:18px;top:calc(15px + env(safe-area-inset-top));background:#244b3b;border:1px solid #799681;color:white;border-radius:9px;padding:8px 13px}.modal a{display:block;text-align:center;text-decoration:none;background:#e3c98f;color:#163528;padding:13px;border-radius:10px;font-weight:800;margin:12px 0}.modal a.secondary{background:#234938;color:white;border:1px solid #7b9d83}.history{display:flex;gap:6px}.history div{flex:1;text-align:center;background:#244b3b;padding:9px 2px;border-radius:8px;font-size:11px}#mode{font-size:10px;letter-spacing:.12em;color:#ffe0a0;font-weight:800}#countdown{font-size:12px;color:#e4d1a3}#app.inflight #bottom,#app.inflight #instruction,#app.inflight #power,#app.inflight #powerLabel{display:none}#app.finished #instruction,#app.finished #power,#app.finished #powerLabel{display:none}@media(max-height:680px){#hud .stat{padding:7px 9px}#title{top:calc(110px + env(safe-area-inset-top))}#bottom{padding:6px}#instruction{bottom:calc(140px + env(safe-area-inset-bottom))}}
-
-/* v0.7: protect playfield and thumb gesture zone */
-#title{display:none}
-#instruction{display:none!important}
-#hud{top:calc(8px + env(safe-area-inset-top));left:8px;gap:5px}
-#hud .stat{min-width:0;padding:8px 9px;border-radius:11px}
-#hud .stat small{font-size:9px}
-#hud .stat b{font-size:18px}
-#hud .stat span{font-size:9px}
-#hud .wind .arrow{font-size:23px}
-#topright{top:calc(8px + env(safe-area-inset-top));right:8px;gap:5px}
-#topright button{width:40px;height:40px;border-radius:10px;font-size:18px}
-#bottom{bottom:calc(6px + env(safe-area-inset-bottom));left:7px;right:7px;padding:7px;border-radius:14px}
-.club{padding:8px 3px;min-width:45px;font-size:13px}
-.club small{font-size:9px}
-#choices{padding-top:5px;gap:5px}
-#choices button{padding:6px 9px}
-#choices span{font-size:11px;min-width:52px}
-#power{top:43%;height:23%;right:10px;width:14px}
-#powerLabel{top:calc(66% + 12px);font-size:12px}
-#gestureHint{position:absolute;z-index:3;bottom:calc(130px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);pointer-events:none;color:#fff7d7;font-size:11px;font-weight:700;text-shadow:0 1px 7px #123;white-space:nowrap;background:#0a281c88;border-radius:15px;padding:5px 10px}
-#app.inflight #gestureHint,#app.finished #gestureHint{display:none}
-@media(max-height:750px){#hud .stat{padding:6px}#gestureHint{bottom:calc(116px + env(safe-area-inset-bottom))}#bottom{padding:5px}.club{padding:6px 2px}}
-
-/* v0.9: native touch gestures belong to the game, not the browser */
-html,body,#app,#course,#swingZone{touch-action:none!important;user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
-button,a{touch-action:manipulation}
-#course{cursor:crosshair}
-#debug{position:absolute;z-index:7;left:9px;top:calc(117px + env(safe-area-inset-top));background:#09251cdd;border:1px solid #66816a;border-radius:10px;color:#eaf3e7;font:10px/1.45 ui-monospace,monospace;padding:9px;white-space:pre;pointer-events:none;display:none}
-#debug.on{display:block}
-#debugBtn{font-size:14px!important}
-#gestureHint{pointer-events:none}
-
-#swingZone{position:absolute;z-index:3;left:0;right:0;top:0;bottom:calc(118px + env(safe-area-inset-bottom));touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;overscroll-behavior:contain;cursor:crosshair}
-#swingZone:before{content:'DRAG HERE ↓';position:absolute;bottom:13px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:800;letter-spacing:.12em;color:#fff8dd;text-shadow:0 1px 5px #123;background:#0c3323b8;padding:8px 13px;border-radius:25px;pointer-events:none}
-#swingZone.dragging:before{content:'RELEASE TO SHOOT'}
-#app.inflight #swingZone,#app.finished #swingZone{display:none}
-#swingZone,#course{ -webkit-touch-callout:none }
-</style></head><body><div id="app"><canvas id="course"></canvas><div id="swingZone" aria-label="Drag downward to swing"></div><div id="hud"><div class="stat"><small>SPRINGHAVEN · 06</small><b id="yardage">162 yd</b><span id="pinlabel">PAR 3 · TEE</span></div><div class="stat wind"><div id="windArrow" class="arrow">↑</div><div><small>WIND</small><b id="windSpeed">8 mph</b><span id="windDirection">Toward green</span></div></div></div><div id="topright"><button id="menuBtn" aria-label="Menu">☰</button><button id="helpBtn" aria-label="Help">?</button><button id="debugBtn" aria-label="Physics telemetry">∑</button></div><div id="debug"></div><div id="title">THE IRISH PAR × SPRINGHAVEN<br><span id="mode">THE DAILY ACE</span></div><div id="power"><div id="powerFill"></div></div><div id="powerLabel">0%</div><div id="instruction"></div><div id="gestureHint">↙ ↓ ↘ DRAG TO AIM & SHOOT</div><div id="bottom"><div id="clubs"></div><div id="choices"><button id="shapeDown">◀</button><span id="shapeText">Straight</span><button id="shapeUp">▶</button><div class="sep"></div><button id="flightDown">▼</button><span id="flightText">Normal</span><button id="flightUp">▲</button></div></div><div id="result"><div id="resultTag" style="color:#e5cc90;font-size:11px;letter-spacing:.14em;font-weight:800">TODAY'S SHOT</div><h2 id="resultTitle"></h2><p id="resultText"></p><button id="again" style="display:none">↻ ANOTHER PRACTICE SHOT</button><button id="share" class="secondary">SHARE RESULT</button><div id="countdown"></div></div><div id="menu" class="modal"><button class="close" data-close="menu">CLOSE ×</button><h2>Springhaven Six</h2><p>One shot. Every day. Chase the ace on a stylized version of Springhaven No. 6.</p><a href="?practice=1">PRACTICE · UNLIMITED SHOTS</a><a href="./" class="secondary">OFFICIAL DAILY CHALLENGE</a><p>Practice does not affect your official daily result or streak. The daily challenge is enforced locally on this device during testing.</p><h3>Last 7 days</h3><div id="history" class="history"></div><p id="streak"></p><p style="font-size:12px">Prototype v1.1 · TIP Studio · Build the Bag. Build the Player.</p></div><div id="help" class="modal"><button class="close" data-close="help">CLOSE ×</button><h2>How to play</h2><p>1. Choose your club and optional shot shape / trajectory at the bottom.</p><p>2. Drag downward inside the swing area to build power. Drag diagonally to set the launch direction.</p><p>3. Release to hit. The camera follows the ball as it flies, lands and rolls.</p><p>4. Chase the ace, or see how close you can finish. Practice as often as you like.</p><p>Wind arrow points in the direction the wind is blowing. Daily conditions are identical for everyone on the same date.</p></div></div>
-<script>
-(()=>{'use strict';
-const $=id=>document.getElementById(id),app=$('app'),canvas=$('course'),ctx=canvas.getContext('2d');
-const practice=new URLSearchParams(location.search).get('practice')==='1';
-const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const today=day(),key='springhaven-six-'+today,daysKey='springhaven-six-days';
-let seed=[...today].reduce((a,c)=>Math.imul(a^c.charCodeAt(0),16777619)>>>0,2166136261);
-function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
-const yard=[125,145,165,180,195][Math.floor(rand()*5)],pinX=(rand()-.5)*12,pinY=yard+(rand()-.5)*8,windSpeed=2+Math.floor(rand()*12),windAngle=rand()*Math.PI*2,windX=Math.cos(windAngle)*windSpeed,windY=Math.sin(windAngle)*windSpeed;
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#10271d"><title>Springhaven Six 3D</title><style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:system-ui,-apple-system,sans-serif;background:#12271e;color:#f8f8ed}#app{position:fixed;inset:0;overflow:hidden;touch-action:none}#scene{position:absolute;inset:0;touch-action:none}#scene canvas{display:block;width:100%;height:100%;touch-action:none}#gesture{position:absolute;inset:0 0 140px;z-index:2;touch-action:none;overscroll-behavior:none}#ballTarget{position:absolute;z-index:4;left:50%;top:72%;width:94px;height:94px;transform:translate(-50%,-50%);border:2px solid #ffffff9c;border-radius:50%;background:#ffffff13;touch-action:none;box-shadow:0 0 0 9px #ffffff18;display:flex;align-items:center;justify-content:center;pointer-events:none}#ballTarget:after{content:'●';font-size:22px;color:white;text-shadow:0 2px 6px #163e26}#ballTarget.active{border-color:#f4d38b;background:#f4d38b2b}#hud{position:absolute;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:flex-start;pointer-events:none}.pill{background:#fffef3eb;color:#153426;padding:10px 12px;border-radius:13px;box-shadow:0 3px 12px #0002}.pill small{display:block;color:#607366;font-size:10px;font-weight:800;letter-spacing:.08em}.pill strong{display:block;font-size:22px;letter-spacing:-.05em}.pill span{font-size:10px;color:#607366}.pill.wind{display:flex;align-items:center;gap:8px}.windArrow{font-size:28px;color:#2b865c}.spacer{flex:1}#menuButton,#helpButton{pointer-events:auto;background:#fffef3e9;border:0;border-radius:12px;width:43px;height:43px;font-size:19px;color:#173626}#right{display:flex;flex-direction:column;gap:7px}#hint{position:absolute;z-index:3;bottom:calc(152px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#09281fc9;border-radius:18px;padding:8px 13px;font-size:12px;white-space:nowrap;pointer-events:none}#power{position:absolute;z-index:3;right:15px;top:40%;height:24%;width:17px;border:2px solid #ffffffa6;border-radius:13px;background:linear-gradient(to top,#4fc69c,#f5cf7c,#e95342)}#powerFill{position:absolute;bottom:0;left:0;right:0;background:#ffffffaa;height:0;border-radius:10px}#powerValue{position:absolute;right:10px;top:66%;z-index:3;font-size:13px;font-weight:800;text-shadow:0 2px 4px #000}#bottom{position:absolute;z-index:5;left:8px;right:8px;bottom:calc(7px + env(safe-area-inset-bottom));background:#f6f6eced;color:#19392b;border-radius:15px;padding:8px;box-shadow:0 5px 20px #0005}#clubs{display:flex;gap:5px;overflow-x:auto}#clubs button{flex:1;min-width:49px;border:0;border-radius:10px;background:#e2e7df;padding:9px 4px;color:#173c29;font-size:14px;font-weight:800}#clubs button.active{background:#24734e;color:white}#clubs small{display:block;font-size:10px;font-weight:400;margin-top:3px}#choices{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:800}#choices button{border:0;background:#e1e7de;border-radius:8px;padding:8px 11px;font-weight:800;color:#19392b}#choices span{min-width:57px;text-align:center}#choices i{height:24px;border-left:1px solid #b5c7b8;margin:0 5px}#app.flying #bottom,#app.flying #hint,#app.flying #ballTarget,#app.flying #power,#app.flying #powerValue{display:none}#app.done #ballTarget,#app.done #hint,#app.done #power,#app.done #powerValue{display:none}.panel{position:absolute;inset:0;z-index:10;background:#0d291ff5;padding:calc(55px + env(safe-area-inset-top)) 22px 25px;display:none;overflow:auto}.panel.open{display:block}.panel button.close{position:absolute;right:18px;top:calc(13px + env(safe-area-inset-top));border:1px solid #829e89;background:#244735;color:white;padding:9px 14px;border-radius:9px}.panel p{line-height:1.6;color:#cbdacc}.panel a{display:block;background:#e7cb8f;color:#1c392a;border-radius:10px;text-decoration:none;padding:14px;text-align:center;font-weight:800;margin:12px 0}.panel a.secondary{background:#28513d;color:white;border:1px solid #668b70}#result{display:none;position:absolute;z-index:8;left:16px;right:16px;top:48%;transform:translateY(-50%);background:#0e3026f2;border:1px solid #86a18a;border-radius:17px;padding:22px;text-align:center;box-shadow:0 10px 50px #0008}#result h2{font-size:30px;margin:9px 0}#result p{color:#d1e1d4}#result button{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:10px;background:#e8ce95;color:#163c2a;font-weight:800}#result button.alt{background:#2a503d;color:white;border:1px solid #819987}#telemetry{position:absolute;z-index:5;left:9px;top:calc(120px + env(safe-area-inset-top));background:#09251ee0;border-radius:9px;padding:8px;font:10px/1.5 monospace;white-space:pre;display:none;pointer-events:none}#telemetry.on{display:block}@media(max-height:700px){#hud .pill{padding:7px}#bottom{padding:5px}#clubs button{padding:6px 3px}#hint{bottom:calc(132px + env(safe-area-inset-bottom))}}
+</style></head><body><div id="app"><div id="scene"></div><div id="gesture"></div><div id="ballTarget"></div><div id="hud"><div class="pill"><small>SPRINGHAVEN · 06</small><strong id="distance">125 yd</strong><span>PAR 3 · TEE</span></div><div class="pill wind"><div class="windArrow" id="windArrow">↑</div><div><small>WIND</small><strong id="windSpeed">5 mph</strong><span id="windDir">toward green</span></div></div><div class="spacer"></div><div id="right"><button id="menuButton">☰</button><button id="helpButton">?</button></div></div><div id="power"><div id="powerFill"></div></div><div id="powerValue">0%</div><div id="hint">Touch the ball · pull back · release</div><div id="bottom"><div id="clubs"></div><div id="choices"><button id="shapeMinus">◀</button><span id="shape">Straight</span><button id="shapePlus">▶</button><i></i><button id="flightMinus">▼</button><span id="flight">Normal</span><button id="flightPlus">▲</button></div></div><div id="telemetry"></div><div id="result"><small id="resultMode">PRACTICE</small><h2 id="resultTitle"></h2><p id="resultText"></p><button id="again">↻ TAKE ANOTHER SHOT</button><button class="alt" id="share">SHARE RESULT</button></div><section id="menu" class="panel"><button class="close" data-close="menu">CLOSE ×</button><h2>Springhaven Six · 3D</h2><p>One shot. Every day. A 3D prototype of Springhaven's sixth hole.</p><a href="?practice=1">UNLIMITED PRACTICE</a><a href="./" class="secondary">OFFICIAL DAILY CHALLENGE</a><p>Official attempts and streaks are stored locally on this device. Practice never changes them.</p><button id="telemetryToggle" style="background:#244735;color:white;border:1px solid #829e89;padding:12px;border-radius:9px">TOGGLE FLIGHT TELEMETRY</button><p id="streak"></p><p style="font-size:12px">v2.0 · stylized course reconstruction based on tee photograph, not a surveyed course model.</p></section><section id="help" class="panel"><button class="close" data-close="help">CLOSE ×</button><h2>How to play</h2><p>Touch the highlighted ball at the bottom of the course. Pull downward and sideways like a slingshot. The farther you pull, the more power. Release to launch.</p><p>Drag elsewhere on the course to look left or right. This is a mobile 3D prototype; pinch zoom and detailed terrain are future refinements.</p><p>The wind arrow shows the direction the wind is blowing. Flight is simulated with drag, lift, gravity and wind-relative velocity.</p></section></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+const $=id=>document.getElementById(id),app=$('app'),gesture=$('gesture'),sceneRoot=$('scene');
+const practice=new URLSearchParams(location.search).get('practice')==='1',today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),key='springhaven-six-'+today;
+let seed=2166136261;for(const c of today)seed=Math.imul(seed^c.charCodeAt(0),16777619)>>>0;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+const yard=[125,145,165,180,195][Math.floor(rand()*5)],pinX=(rand()-.5)*11,windSpeed=2+Math.floor(rand()*12),windAngle=rand()*Math.PI*2,windX=Math.cos(windAngle)*windSpeed,windY=Math.sin(windAngle)*windSpeed;
+$('distance').textContent=yard+' yd';$('windSpeed').textContent=windSpeed+' mph';$('windArrow').style.transform='rotate('+((Math.atan2(windX,windY)*180/Math.PI+360)%360)+'deg';
+$('windDir').textContent=['N','NE','E','SE','S','SW','W','NW'][Math.round(((Math.atan2(windX,windY)*180/Math.PI+360)%360)/45)%8]+' bound';
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;sceneRoot.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xc6d9da);scene.fog=new THREE.Fog(0xc6d9da,160,510);
+const camera=new THREE.PerspectiveCamera(57,innerWidth/innerHeight,.1,800);
+scene.add(new THREE.HemisphereLight(0xe7f5ff,0x45632d,2.3));const sun=new THREE.DirectionalLight(0xfff4d7,2.6);sun.position.set(-60,100,80);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-130;sun.shadow.camera.right=130;sun.shadow.camera.top=200;sun.shadow.camera.bottom=-150;scene.add(sun);
+const material=(c,roughness=1)=>new THREE.MeshStandardMaterial({color:c,roughness,metalness:0});
+const grass=material(0x4d8c48),rough=material(0x326f37),green=material(0x9bcb72),fringe=material(0x70a653),sand=material(0xe8d9ae),stone=material(0xaaa69b),pathMat=material(0x777d78),waterMat=new THREE.MeshStandardMaterial({color:0x367f8c,roughness:.24,metalness:.1,transparent:true,opacity:.92,side:THREE.DoubleSide});
+const toM=y=>y*.9144,greenZ=toM(yard),pondZ=greenZ-26;
+function height(x,z){let approach=.65*Math.sin(z*.024)+.3*Math.sin(x*.05);let rise=3.6/(1+Math.exp(-(z-(greenZ-25))*.19));return approach+rise+Math.max(0,(z-20)/greenZ)*.6}
+function mesh(geometry,mat,x=0,y=0,z=0){let m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);m.receiveShadow=true;scene.add(m);return m}
+let terrain=new THREE.PlaneGeometry(350,Math.max(480,greenZ+260),65,95);terrain.rotateX(-Math.PI/2);let pos=terrain.attributes.position;for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i)+greenZ*.55;pos.setY(i,height(x,z))}terrain.computeVertexNormals();mesh(terrain,rough,0,0,greenZ*.55);
+function ellipse(rx,rz,mat,x,z,yOffset=.05,segments=64){let sh=new THREE.Shape();sh.absellipse(0,0,rx,rz,0,Math.PI*2,false,0);let g=new THREE.ShapeGeometry(sh,segments);g.rotateX(-Math.PI/2);return mesh(g,mat,x,height(x,z)+yOffset,z)}
+// Mown landing corridor and the broad left apron.
+ellipse(61,greenZ*.59,grass,-8,greenZ*.47,.12);
+ellipse(36,31,fringe,-7,greenZ+2,.28);
+ellipse(30,24,green,-7,greenZ+2,.33);
+ellipse(17,10,grass,-29,greenZ-17,.24);
+ellipse(12,7,sand,27,greenZ+9,.36);
+// Curved stone retaining wall across the front of the green.
+const wallCurve=[];for(let i=0;i<=40;i++){let x=-37+i*1.85,z=greenZ-20+6*Math.pow(x/37,2);wallCurve.push(new THREE.Vector3(x,height(x,z)-.7,z))}
+const wallGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(wallCurve),90,1.2,7,false);mesh(wallGeo,stone);
+for(let i=0;i<39;i++){let a=wallCurve[i],b=wallCurve[i+1];let block=mesh(new THREE.BoxGeometry(1.9,2.8,1.2),i%3?stone:material(0x92948b),(a.x+b.x)/2,(a.y+b.y)/2-1.3,(a.z+b.z)/2);block.rotation.y=-Math.atan2(b.z-a.z,b.x-a.x)}
+// Pond and fountain sit directly below the wall.
+let pond=ellipse(39,16,waterMat,0,pondZ,-1.25);pond.material.depthWrite=false;
+const fountain=mesh(new THREE.ConeGeometry(.75,5,10),new THREE.MeshBasicMaterial({color:0xe8f9fa,transparent:true,opacity:.7}),0,height(0,pondZ)+2,pondZ);fountain.rotation.z=Math.PI;
+for(let i=0;i<3;i++){let ring=mesh(new THREE.TorusGeometry(2+i*1.9,.08,6,42),new THREE.MeshBasicMaterial({color:0xc2f3f2,transparent:true,opacity:.65}),0,height(0,pondZ)-.2,pondZ);ring.rotation.x=Math.PI/2}
+// Right cart path curves behind the green.
+const pathPoints=[];for(let i=0;i<30;i++){let z=greenZ-25+i*3.4,x=53+9*Math.sin(i*.11);pathPoints.push(new THREE.Vector3(x,height(x,z)+.1,z))}
+mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pathPoints),70,2.3,7,false),pathMat);
+const trunk=material(0x70513c),leafMaterials=[material(0x244d2f),material(0x315d35),material(0x406c3c)];
+function tree(x,z,r){let h=height(x,z);let t=mesh(new THREE.CylinderGeometry(.4,.7,5.5,6),trunk,x,h+2.6,z);t.castShadow=true;for(let j=0;j<3;j++){let crown=mesh(new THREE.IcosahedronGeometry(r*(1-j*.19),1),leafMaterials[(Math.abs(Math.round(x+z))+j)%3],x,h+6.2+j*2,z);crown.castShadow=true}}
+for(let i=0;i<30;i++){let z=greenZ-40+rand()*165,x=(rand()>.5?1:-1)*(57+rand()*70);tree(x,z,3+rand()*2.7)}
+// Flagstick and cup
+const cupX=pinX-7,cupZ=greenZ+2,cupY=height(cupX,cupZ)+.36;
+mesh(new THREE.CylinderGeometry(.045,.045,5,8),material(0xf7f7e5),cupX,cupY+2.5,cupZ);
+let flag=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshBasicMaterial({color:0xf2cc78,side:THREE.DoubleSide}));flag.geometry.setAttribute('position',new THREE.Float32BufferAttribute([cupX,cupY+5,cupZ,cupX+2.2,cupY+4.3,cupZ,cupX,cupY+3.9,cupZ],3));flag.geometry.setIndex([0,1,2]);flag.geometry.computeVertexNormals();scene.add(flag);
+const ball=mesh(new THREE.SphereGeometry(.33,16,12),material(0xffffff,.25),0,height(0,0)+.45,0);ball.castShadow=true;
+const guideMat=new THREE.LineBasicMaterial({color:0xf3d99b,transparent:true,opacity:.8});let guide=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,1,0),new THREE.Vector3(0,1,greenZ)]),guideMat);scene.add(guide);
+let cameraYaw=0,phase='ready',drag=null,flight=1,shape=1,club='7i',shot=null,animation=null,lastResult=null;
 const clubs=[['PW',125],['9i',140],['8i',152],['7i',165],['6i',178],['5i',190]],shapes=['Draw','Straight','Fade'],flights=['Low','Normal','High'];
-let club='7i',shape=1,flight=1,phase='ready',W=400,H=800,dpr=1,drag=null,shot=null,trail=[],lastResult=null,frameId=0;
-const get=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch{return f}};
-const official=practice?null:get(key,null);
-$('mode').textContent=practice?'PRACTICE · UNLIMITED':'THE DAILY ACE · ONE SHOT';
-$('yardage').textContent=yard+' yd';$('windSpeed').textContent=windSpeed+' mph';
-const dirs=['N','NE','E','SE','S','SW','W','NW'];let bearing=(Math.atan2(windX,windY)*180/Math.PI+360)%360;
-$('windArrow').style.transform='rotate('+bearing+'deg)';$('windDirection').textContent=dirs[Math.round(bearing/45)%8]+' bound';
-const clubBar=$('clubs');
-for(let [name,carry] of clubs){let b=document.createElement('button');b.className='club';b.innerHTML=name+'<small>'+carry+'y</small>';b.addEventListener('click',()=>{if(phase!=='ready')return;club=name;renderClubs()});clubBar.appendChild(b)}
-function renderClubs(){[...clubBar.children].forEach((b,i)=>b.classList.toggle('active',clubs[i][0]===club))}
-renderClubs();
-function controls(){if(phase!=='ready')return;$('shapeText').textContent=shapes[shape];$('flightText').textContent=flights[flight]}
-$('shapeDown').onclick=()=>{shape=(shape+2)%3;controls()};$('shapeUp').onclick=()=>{shape=(shape+1)%3;controls()};$('flightDown').onclick=()=>{flight=Math.max(0,flight-1);controls()};$('flightUp').onclick=()=>{flight=Math.min(2,flight+1);controls()};controls();
-$('debugBtn').onclick=()=>{$('debug').classList.toggle('on')};$('menuBtn').onclick=()=>{history();$('menu').classList.add('open')};$('helpBtn').onclick=()=>$('help').classList.add('open');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=() =>$(b.dataset.close).classList.remove('open'));
-function history(){let days=get(daysKey,[]),n=0,d=new Date(today+'T12:00:00Z');if(!days.includes(today))d.setUTCDate(d.getUTCDate()-1);while(days.includes(d.toISOString().slice(0,10))){n++;d.setUTCDate(d.getUTCDate()-1)}$('streak').textContent='🔥 '+n+' day streak';$('history').replaceChildren();for(let i=6;i>=0;i--){let dt=new Date(today+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()-i);let k=dt.toISOString().slice(0,10),el=document.createElement('div');el.textContent=dt.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'})+' '+(days.includes(k)?'✓':'—');$('history').appendChild(el)}}
-function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
-function oval(x,y,rx,ry,color,rot=0){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,0,Math.max(.1,rx),Math.max(.1,ry),0,0,Math.PI*2);ctx.fill();ctx.restore()}
-function world(x,y,z=0){let camera=shot&&phase==='flight'?shot.camera:0;let view=yard+90-camera,scale=Math.min(W/115,(H-300)/Math.max(90,view));return {x:W/2+x*scale,y:H-245-(y-camera)*scale-z*scale*.8,s:scale}}
-function draw(){ctx.clearRect(0,0,W,H);let sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#bfd6d9');sky.addColorStop(.42,'#d9e7d5');sky.addColorStop(.421,'#4c8457');sky.addColorStop(1,'#2b603b');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-let cam=shot&&phase==='flight'?shot.camera:0;let scale=world(0,0).s;
-for(let y=Math.floor(cam/13)*13;y<cam+yard+100;y+=13){let a=world(0,y),b=world(0,y+13);ctx.fillStyle=Math.floor(y/13)%2?'#ffffff07':'#00000008';ctx.fillRect(0,b.y,W,a.y-b.y)}
-const lake=world(0,yard*.82);oval(lake.x,lake.y,W*.56,scale*13,'#8d9183',-.08);oval(lake.x,lake.y-5,W*.54,scale*12,'#286d7e',-.08);ctx.strokeStyle='#d7d0bc';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(lake.x,lake.y-9,W*.55,scale*14,-.08,Math.PI*1.02,Math.PI*1.94);ctx.stroke();ctx.fillStyle='#e5f5f4';ctx.beginPath();ctx.moveTo(lake.x,lake.y-3);ctx.quadraticCurveTo(lake.x-12,lake.y-25,lake.x,lake.y-34);ctx.quadraticCurveTo(lake.x+12,lake.y-25,lake.x,lake.y-3);ctx.fill();
-for(let i=0;i<6;i++){ctx.strokeStyle='#c4f4f23b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W*.1,lake.y-25+i*8);ctx.quadraticCurveTo(W*.5,lake.y-32+i*8,W*.9,lake.y-23+i*8);ctx.stroke()}
-const g=world(0,yard);oval(g.x,g.y,scale*31,scale*24,'#47794a',-.17);oval(g.x,g.y,scale*26,scale*19,'#7fa96b',-.17);oval(g.x,g.y,scale*22,scale*15,'#a5c88c',-.17);
-oval(g.x+scale*30,g.y-scale*6,scale*14,scale*6,'#dfcc97',-.45);
-let f=world(pinX,pinY);ctx.strokeStyle='#fff8df';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x,f.y-35);ctx.stroke();ctx.fillStyle='#eac77c';ctx.beginPath();ctx.moveTo(f.x,f.y-35);ctx.lineTo(f.x+19,f.y-28);ctx.lineTo(f.x,f.y-21);ctx.fill();oval(f.x,f.y,3,3,'white');
-let tee=world(0,0);oval(tee.x,tee.y,scale*12,scale*5,'#80ae7c');
-if(phase==='ready'||phase==='drag'){ctx.setLineDash([5,9]);ctx.strokeStyle='#f8e1a9aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tee.x,tee.y);let target=world(drag?drag.aim:0,pinY);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);oval(tee.x,tee.y,6,6,'#fffef4');if(drag){ctx.strokeStyle='#f9db92';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(tee.x,tee.y);ctx.lineTo(drag.x,drag.y);ctx.stroke();oval(drag.x,drag.y,8,8,'#fff3c8')}}
-if(phase==='flight'&&trail.length){ctx.strokeStyle='#fffbe2c9';ctx.lineWidth=2;ctx.beginPath();trail.forEach((q,i)=>{let p=world(q.x,q.y,q.z);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.stroke()}
-if(shot&&shot.ball){let p=world(shot.ball.x,shot.ball.y,shot.ball.z);oval(p.x,p.y+3,6,3,'#0003');oval(p.x,p.y,6,6,'#fff9ed')}
-if(phase==='done'&&lastResult&&!lastResult.water){let p=world(lastResult.x,lastResult.y);oval(p.x,p.y,6,6,'white')}
-}
-function updatePower(v){$('powerFill').style.height=v+'%';$('powerLabel').textContent=Math.round(v)+'%'}
-function pointer(e){let r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
-
-const zone=$('swingZone');
-// Prevent document-level Safari rubber-band scrolling during a shot, even if finger leaves the zone.
-document.addEventListener('touchmove',e=>{if(phase==='drag'&&e.cancelable)e.preventDefault()},{passive:false,capture:true});
-document.addEventListener('touchstart',e=>{if(e.target===canvas&&e.cancelable)e.preventDefault()},{passive:false,capture:true});
-function beginGesture(x,y){if(phase!=='ready')return;drag={startX:x,startY:y,x,y,aim:0,power:0,angle:0};phase='drag';zone.classList.add('dragging');draw()}
-function moveGesture(x,y){if(phase!=='drag')return;drag.x=x;drag.y=y;let dx=x-drag.startX,dy=Math.max(0,y-drag.startY);drag.power=clamp(dy/Math.max(105,H*.17)*100,0,110);drag.angle=clamp(-Math.atan2(dx,Math.max(20,dy)),-.24,.24);drag.aim=Math.tan(drag.angle)*yard;updatePower(drag.power);draw()}
-function endGesture(){if(phase!=='drag')return;let power=drag.power,aim=drag.aim;drag=null;zone.classList.remove('dragging');if(power<15){phase='ready';updatePower(0);draw();return}launch(power,aim)}
-zone.addEventListener('touchstart',e=>{if(e.cancelable)e.preventDefault();if(e.touches.length!==1)return;let t=e.touches[0];beginGesture(t.clientX,t.clientY)},{passive:false});
-zone.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault();let t=e.touches[0];if(t)moveGesture(t.clientX,t.clientY)},{passive:false});
-zone.addEventListener('touchend',e=>{if(e.cancelable)e.preventDefault();endGesture()},{passive:false});
-zone.addEventListener('touchcancel',e=>{if(e.cancelable)e.preventDefault();if(phase==='drag'){phase='ready';drag=null;zone.classList.remove('dragging');draw()}},{passive:false});
-zone.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;e.preventDefault();beginGesture(e.clientX,e.clientY);zone.setPointerCapture(e.pointerId)});
-zone.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(phase==='drag'){e.preventDefault();moveGesture(e.clientX,e.clientY)}});
-zone.addEventListener('pointerup',e=>{if(e.pointerType==='touch')return;e.preventDefault();endGesture()});
-zone.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('selectstart',e=>e.preventDefault());
-document.addEventListener('dragstart',e=>e.preventDefault());
-/* SI-unit flight engine. Coordinates: x=right (m), y=downrange (m), z=up (m).
-   Approximate aerodynamic coefficients; calibration is required for launch monitor fidelity. */
-const M=0.04593,R=0.021335,A=Math.PI*R*R,RHO=1.225,G=9.80665;
-const MPH=0.44704,YD=0.9144;
-const profiles={
- PW:{speed:38.5,angle:29,spin:8200},'9i':{speed:42,angle:25,spin:7600},
- '8i':{speed:45,angle:22,spin:6900},'7i':{speed:48.5,angle:19,spin:6200},
- '6i':{speed:52,angle:16,spin:5500},'5i':{speed:55,angle:14,spin:4800}
-};
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function sim(power,aim){
- const profile=profiles[club],flightDelta=flight-1;
- const speed=profile.speed*power/100,launch=(profile.angle+flightDelta*3.2)*Math.PI/180;
- // aim is lateral yards at the pin; use the launch angle, not a destination offset
- const heading=Math.atan2(aim,yard*YD);
- const spin=profile.spin*(1+flightDelta*.07),axis=(shape-1)*.12;
- let v={x:speed*Math.cos(launch)*Math.sin(heading),y:speed*Math.cos(launch)*Math.cos(heading),z:speed*Math.sin(launch)};
- let p={x:0,y:0,z:.04},t=0,dt=.008,points=[{...p,t:0}],apex=0,land=null;
- const wx=windX*MPH,wy=windY*MPH;
- function acceleration(q){
-   let air={x:q.x-wx,y:q.y-wy,z:q.z},mag=Math.hypot(air.x,air.y,air.z)||1;
-   let spinRatio=R*(spin*2*Math.PI/60)/mag;
-   let cd=clamp(.24+.065*spinRatio,.22,.36);
-   let cl=clamp(.08+.42*spinRatio,.07,.32);
-   let factor=.5*RHO*A/M*mag;
-   // Backspin lift is perpendicular to relative air velocity; tilted spin axis adds curve.
-   let up={x:-air.x*air.z/(mag*mag),y:-air.y*air.z/(mag*mag),z:1-air.z*air.z/(mag*mag)};
-   let ul=Math.hypot(up.x,up.y,up.z)||1;up.x/=ul;up.y/=ul;up.z/=ul;
-   let side={x:air.y/mag,y:-air.x/mag,z:0};
-   return {x:-factor*cd*air.x+factor*cl*mag*(up.x*Math.cos(axis)+side.x*Math.sin(axis)),
-           y:-factor*cd*air.y+factor*cl*mag*(up.y*Math.cos(axis)+side.y*Math.sin(axis)),
-           z:-G-factor*cd*air.z+factor*cl*mag*up.z*Math.cos(axis)};
- }
- // Midpoint integration improves stability relative to explicit Euler.
- for(let i=0;i<2200;i++){
-   let a=acceleration(v),mid={x:v.x+a.x*dt/2,y:v.y+a.y*dt/2,z:v.z+a.z*dt/2},am=acceleration(mid);
-   let next={x:p.x+mid.x*dt,y:p.y+mid.y*dt,z:p.z+mid.z*dt};
-   v.x+=am.x*dt;v.y+=am.y*dt;v.z+=am.z*dt;t+=dt;
-   if(next.z<=0&&t>.15){let frac=p.z/(p.z-next.z);land={x:p.x+(next.x-p.x)*frac,y:p.y+(next.y-p.y)*frac,z:0,t:t-dt+dt*frac,v:{...v}};points.push(land);break}
-   p=next;apex=Math.max(apex,p.z);if(i%4===0)points.push({...p,t});
- }
- if(!land)land={...p,t,v:{...v}};
- let carry=land.y/YD,lateral=land.x/YD,landingAngle=Math.atan2(-land.v.z,Math.hypot(land.v.x,land.v.y))*180/Math.PI;
- // Ground model: surface friction + restitution + simplified green slope, timestep integration.
- let surface=(x,y)=>{let yy=y/YD,xx=x/YD;if(yy>yard*.75&&yy<yard*.88&&Math.abs(xx)<37)return 'water';if(Math.hypot(xx-pinX,(yy-pinY)*1.15)<24)return 'green';return 'rough'};
- let water=surface(land.x,land.y)==='water';
- let pos={x:land.x,y:land.y},vel={x:land.v.x*.20,y:land.v.y*.20};
- let groundPoints=[],rollTime=0,rollDistance=0;
- if(!water){
-   // landing angle & spin affect horizontal bounce/roll energy
-   let retain=clamp(.48-landingAngle*.005-(spin/9000)*.13,.07,.38);
-   vel.x=land.v.x*retain;vel.y=land.v.y*retain;
-   for(let i=0;i<1200;i++){
-     let ground=surface(pos.x,pos.y);
-     if(ground==='water'){water=true;break}
-     let friction=ground==='green'?.16:.42,spd=Math.hypot(vel.x,vel.y);
-     if(spd<.12)break;
-     let decel=G*friction,ax=-decel*vel.x/spd,ay=-decel*vel.y/spd;
-     if(ground==='green'){ax+=.11;ay-=.08} // illustrative green slope, not surveyed contours
-     vel.x+=ax*.016;vel.y+=ay*.016;
-     let nx=pos.x+vel.x*.016,ny=pos.y+vel.y*.016;
-     rollDistance+=Math.hypot(nx-pos.x,ny-pos.y);pos.x=nx;pos.y=ny;rollTime+=.016;
-     if(i%3===0)groundPoints.push({x:pos.x,y:pos.y,z:0,t:land.t+rollTime});
-   }
- }
- const dist=Math.hypot(pos.x/YD-pinX,pos.y/YD-pinY),ace=!water&&dist<.18;
- return {points,groundPoints,land,carry,lateral,apex:apex/YD,landingAngle,hang:t,spin,speed:speed/MPH,water,ace,dist:water?999:dist,x:pos.x/YD,y:pos.y/YD,roll:rollDistance/YD};
-}
-function launch(power,aim){
- phase='flight';app.classList.add('inflight');
- const result=sim(power,aim),path=result.points.concat(result.groundPoints),start=performance.now();
- shot={camera:0,ball:{x:0,y:0,z:0}};trail=[];
- const duration=6700,flightFraction=.78;
- const sample=(t)=>{
-   let arr=t<=result.land.t?result.points:result.groundPoints;
-   if(!arr.length)return result.land;
-   let lo=0,hi=arr.length-1;
-   while(lo<hi){let mid=(lo+hi)>>1;if(arr[mid].t<t)lo=mid+1;else hi=mid}
-   if(lo===0)return arr[0];let a=arr[lo-1],b=arr[lo],u=clamp((t-a.t)/(b.t-a.t||1),0,1);
-   return {x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,z:a.z+(b.z-a.z)*u};
- };
- const flightTime=result.land.t,rollTime=result.groundPoints.length?result.groundPoints.at(-1).t-flightTime:0;
- function frame(now){
-   if(phase!=='flight')return;
-   let u=clamp((now-start)/duration,0,1);
-   let t=u<flightFraction?u/flightFraction*flightTime:flightTime+(u-flightFraction)/(1-flightFraction)*rollTime;
-   let q=sample(t),ball={x:q.x/YD,y:q.y/YD,z:q.z/YD};
-   shot.ball=ball;shot.camera=Math.max(0,ball.y-yard*.30);
-   trail.push({...ball});if(trail.length>110)trail.shift();draw();
-   $('debug').textContent='BALL PHYSICS · '+(practice?'PRACTICE':'DAILY')+'\n'+
-     'Speed '+result.speed.toFixed(1)+' mph | Spin '+result.spin.toFixed(0)+' rpm\n'+
-     'Carry '+result.carry.toFixed(1)+' yd | Side '+result.lateral.toFixed(1)+' yd\n'+
-     'Apex '+result.apex.toFixed(1)+' yd | Hang '+result.hang.toFixed(2)+' s\n'+
-     'Landing '+result.landingAngle.toFixed(1)+'° | Roll '+result.roll.toFixed(1)+' yd\n'+
-     'Wind '+windSpeed+' mph | '+Math.round(power)+'% power';
-   if(u<1){frameId=requestAnimationFrame(frame)}else finish(result);
- }
- frameId=requestAnimationFrame(frame);
-}
-function finish(r){phase='done';lastResult=r;app.classList.remove('inflight');app.classList.add('finished');if(!practice){try{localStorage.setItem(key,JSON.stringify(r));let days=get(daysKey,[]);if(!days.includes(today))days.push(today);localStorage.setItem(daysKey,JSON.stringify(days))}catch(e){console.warn(e)}}showResult()}
-function showResult(){let r=lastResult;if(!r)return;$('resultTag').textContent=practice?'PRACTICE SHOT':'OFFICIAL DAILY SHOT';$('resultTitle').textContent=r.ace?'⛳ HOLE IN ONE!':r.water?'💦 IN THE WATER':r.dist<2?'SO CLOSE!':r.dist.toFixed(1)+' YARDS AWAY';$('resultText').textContent=r.water?'The pond wins this round.':'Final distance: '+r.dist.toFixed(2)+' yards.';$('again').style.display=practice?'block':'none';$('countdown').textContent=practice?'Unlimited practice · no streak changes':'Next official shot unlocks at midnight Eastern';$('result').style.display='block';draw()}
-$('again').onclick=()=>{cancelAnimationFrame(frameId);phase='ready';shot=null;trail=[];lastResult=null;app.classList.remove('finished','inflight');$('result').style.display='none';$('instruction').textContent='Drag down to set power and direction · release';updatePower(0);draw()};
-$('share').onclick=async()=>{let r=lastResult;if(!r)return;let text='⛳ SPRINGHAVEN SIX · '+today+'\n'+(r.ace?'HOLE IN ONE!':r.water?'Water':r.dist.toFixed(2)+' yards from the cup')+'\nOne shot. Every day.';try{if(navigator.share)await navigator.share({text});else if(navigator.clipboard)await navigator.clipboard.writeText(text)}catch(e){}};
-if(official){lastResult=official;phase='done';app.classList.add('finished');shot={camera:Math.max(0,official.y-yard*.3),ball:official.water?null:{x:official.x,y:official.y,z:0}};showResult()}
-window.addEventListener('resize',resize);window.addEventListener('focus',()=>{if(day()!==today)location.reload()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&day()!==today)location.reload()});resize();
-})();
+for(let [name,dist] of clubs){let b=document.createElement('button');b.innerHTML=name+'<small>'+dist+'y</small>';b.onclick=()=>{if(phase!=='ready')return;club=name;drawClubs()};$('clubs').append(b)}
+function drawClubs(){[...$('clubs').children].forEach((b,i)=>b.classList.toggle('active',clubs[i][0]===club))}drawClubs();
+function choices(){$('shape').textContent=shapes[shape];$('flight').textContent=flights[flight]}choices();
+$('shapeMinus').onclick=()=>{shape=Math.max(0,shape-1);choices()};$('shapePlus').onclick=()=>{shape=Math.min(2,shape+1);choices()};$('flightMinus').onclick=()=>{flight=Math.max(0,flight-1);choices()};$('flightPlus').onclick=()=>{flight=Math.min(2,flight+1);choices()};
+function setCamera(){if(phase==='flying'&&shot){let p=shot.ball;camera.position.set(p.x+Math.sin(cameraYaw)*13,p.y+8,p.z-19);camera.lookAt(p.x,p.y+1,p.z+16);return}camera.position.set(Math.sin(cameraYaw)*6,7, -17);camera.lookAt(Math.sin(cameraYaw)*16,3.5,greenZ*.55)}
+function render(){requestAnimationFrame(render);if(animation)animation(performance.now());setCamera();renderer.render(scene,camera)}render();
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);const b=$('ballTarget');b.style.top=Math.round(innerHeight*.71)+'px'}addEventListener('resize',resize);resize();
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),YD=.9144,MPH=.44704;
+function compute(power,aim){let profile={PW:[38.5,29,8200],'9i':[42,25,7600],'8i':[45,22,6900],'7i':[48.5,19,6200],'6i':[52,16,5500],'5i':[55,14,4800]}[club];let speed=profile[0]*power/100,angle=(profile[1]+(flight-1)*3.2)*Math.PI/180,heading=Math.atan2(aim,yard),spin=profile[2],axis=(shape-1)*.12;
+let p={x:0,y:0,z:0},v={x:speed*Math.cos(angle)*Math.sin(heading),y:speed*Math.sin(angle),z:speed*Math.cos(angle)*Math.cos(heading)},points=[{...p,t:0}],t=0,apex=0,land=null,dt=.008;
+function accel(q){let a={x:q.x-windX*MPH,y:q.y,z:q.z-windY*MPH},mag=Math.hypot(a.x,a.y,a.z)||1,ratio=.021335*(spin*2*Math.PI/60)/mag,cd=clamp(.24+.065*ratio,.22,.36),cl=clamp(.08+.42*ratio,.07,.32),factor=.5*1.225*Math.PI*.021335**2/.04593*mag,up={x:-a.x*a.y/mag**2,y:1-a.y*a.y/mag**2,z:-a.z*a.y/mag**2},ul=Math.hypot(up.x,up.y,up.z)||1,side={x:a.z/mag,y:0,z:-a.x/mag};return{x:-factor*cd*a.x+factor*cl*mag*(up.x/ul*Math.cos(axis)+side.x*Math.sin(axis)),y:-9.80665-factor*cd*a.y+factor*cl*mag*up.y/ul*Math.cos(axis),z:-factor*cd*a.z+factor*cl*mag*(up.z/ul*Math.cos(axis)+side.z*Math.sin(axis))}}
+for(let i=0;i<2200;i++){let a=accel(v),mid={x:v.x+a.x*dt/2,y:v.y+a.y*dt/2,z:v.z+a.z*dt/2},am=accel(mid);let next={x:p.x+mid.x*dt,y:p.y+mid.y*dt,z:p.z+mid.z*dt};v.x+=am.x*dt;v.y+=am.y*dt;v.z+=am.z*dt;t+=dt;apex=Math.max(apex,next.y);let ground=height(next.x,next.z);if(next.y<=ground&&t>.15){land={x:next.x,y:ground,z:next.z,t,v:{...v}};points.push({...land});break}p=next;if(i%4===0)points.push({...p,t})}
+if(!land)land={...p,t,v:{...v}};let isWater=q=>q.z>pondZ-15&&q.z<pondZ+15&&Math.abs(q.x)<36,water=isWater(land),rolling=[],q={...land},velocity={x:land.v.x*.15,z:land.v.z*.15};
+if(!water){for(let i=0;i<600;i++){let isGreen=Math.hypot((q.x+7)/30,(q.z-greenZ-2)/24)<1;let mu=isGreen?.2:.5,sp=Math.hypot(velocity.x,velocity.z);if(sp<.12)break;let f=Math.min(sp,9.80665*mu*.016);velocity.x-=velocity.x/sp*f;velocity.z-=velocity.z/sp*f;q.x+=velocity.x*.016;q.z+=velocity.z*.016;q.y=height(q.x,q.z)+.35;if(i%3===0)rolling.push({...q,t:land.t+i*.016});if(isWater(q)){water=true;break}}}
+let distance=Math.hypot(q.x-cupX,q.z-cupZ)/YD;return{points,rolling,land,water,dist:water?999:distance,ace:!water&&distance<.18,x:q.x,y:q.y,z:q.z,carry:land.z/YD,apex:apex/YD,hang:t,speed:speed/MPH,spin}}
+function launch(power,aim){phase='flying';app.classList.add('flying');guide.visible=false;const result=compute(power,aim),path=result.points.concat(result.rolling),duration=6900,start=performance.now();shot={ball:{x:0,y:1,z:0}};let trailPoints=[],trailLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xfff2c9,transparent:true,opacity:.85}));scene.add(trailLine);
+function sample(t){let lo=0,hi=path.length-1;while(lo<hi){let m=(lo+hi)>>1;if(path[m].t<t)lo=m+1;else hi=m}if(!lo)return path[0];let a=path[lo-1],b=path[lo],u=clamp((t-a.t)/(b.t-a.t||1),0,1);return{x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,z:a.z+(b.z-a.z)*u}}
+let total=path.at(-1).t;animation=now=>{let u=clamp((now-start)/duration,0,1),q=sample(u*total);shot.ball=q;ball.position.set(q.x,q.y,q.z);trailPoints.push(new THREE.Vector3(q.x,q.y,q.z));if(trailPoints.length>120)trailPoints.shift();trailLine.geometry.dispose();trailLine.geometry=new THREE.BufferGeometry().setFromPoints(trailPoints);$('telemetry').textContent='Speed '+result.speed.toFixed(1)+' mph\nSpin '+result.spin+' rpm\nCarry '+result.carry.toFixed(1)+' yd\nApex '+result.apex.toFixed(1)+' yd\nHang '+result.hang.toFixed(1)+' s\nWind '+windSpeed+' mph';if(u>=1){animation=null;scene.remove(trailLine);trailLine.geometry.dispose();finish(result)}}}
+function finish(r){phase='done';lastResult=r;app.classList.remove('flying');app.classList.add('done');if(!practice){try{localStorage.setItem(key,JSON.stringify(r));let days=JSON.parse(localStorage.getItem('springhaven-six-days')||'[]');if(!days.includes(today))days.push(today);localStorage.setItem('springhaven-six-days',JSON.stringify(days))}catch{}}$('resultMode').textContent=practice?'PRACTICE':'DAILY CHALLENGE';$('resultTitle').textContent=r.ace?'⛳ HOLE IN ONE!':r.water?'💦 WATER':r.dist.toFixed(1)+' YARDS AWAY';$('resultText').textContent=r.water?'The pond claims this one.':'Final distance '+r.dist.toFixed(2)+' yards from the pin.';$('again').style.display=practice?'block':'none';$('result').style.display='block'}
+$('again').onclick=()=>{if(!practice)return;phase='ready';shot=null;animation=null;ball.position.set(0,height(0,0)+.45,0);guide.visible=true;app.classList.remove('done','flying');$('result').style.display='none';$('powerFill').style.height='0';$('powerValue').textContent='0%'};
+$('share').onclick=async()=>{let text='⛳ SPRINGHAVEN SIX '+today+' · '+(lastResult.water?'Water':lastResult.dist.toFixed(1)+' yards from pin');try{if(navigator.share)await navigator.share({text});else await navigator.clipboard.writeText(text)}catch{}};
+let active=null;
+function updatePower(v){$('powerFill').style.height=v+'%';$('powerValue').textContent=Math.round(v)+'%'}
+function start(e){if(phase!=='ready')return;let fromBall=Math.hypot(e.clientX-innerWidth/2,e.clientY-innerHeight*.71)<Math.min(95,innerWidth*.23);active={id:e.pointerId,x:e.clientX,y:e.clientY,mode:fromBall?'swing':'camera',power:0,aim:0};if(fromBall)$('ballTarget').classList.add('active');gesture.setPointerCapture(e.pointerId)}
+function move(e){if(!active||e.pointerId!==active.id)return;let dx=e.clientX-active.x,dy=e.clientY-active.y;if(active.mode==='camera'){cameraYaw=clamp(cameraYaw-dx*.0015,-.6,.6);active.x=e.clientX;return}active.power=clamp(dy/Math.max(110,innerHeight*.17)*100,0,110);active.aim=clamp(-Math.atan2(dx,Math.max(25,dy)),-.35,.35)*yard;updatePower(active.power);let p=new THREE.Vector3(active.aim*.9144,2,greenZ);guide.geometry.dispose();guide.geometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,height(0,0)+.5,0),p])}
+function end(e){if(!active||e.pointerId!==active.id)return;let a=active;active=null;$('ballTarget').classList.remove('active');if(a.mode==='swing'&&a.power>15)launch(a.power,a.aim);else updatePower(0)}
+gesture.addEventListener('pointerdown',e=>{if(e.cancelable)e.preventDefault();start(e)},{passive:false});gesture.addEventListener('pointermove',e=>{if(e.cancelable)e.preventDefault();move(e)},{passive:false});gesture.addEventListener('pointerup',e=>{if(e.cancelable)e.preventDefault();end(e)},{passive:false});gesture.addEventListener('pointercancel',e=>{active=null;$('ballTarget').classList.remove('active');updatePower(0)});
+document.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false,capture:true});document.addEventListener('selectstart',e=>e.preventDefault());document.addEventListener('dragstart',e=>e.preventDefault());document.addEventListener('contextmenu',e=>e.preventDefault());
+$('menuButton').onclick=()=>{$('menu').classList.add('open');let days=[];try{days=JSON.parse(localStorage.getItem('springhaven-six-days')||'[]')}catch{}$('streak').textContent='Days played on this device: '+days.length};$('helpButton').onclick=()=>$('help').classList.add('open');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=() =>$(b.dataset.close).classList.remove('open'));$('telemetryToggle').onclick=()=>{$('telemetry').classList.toggle('on');$('menu').classList.remove('open')};
+if(!practice){try{let saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){lastResult=saved;ball.position.set(saved.x||0,saved.y||height(0,0)+.4,saved.z||0);finish(saved)}}catch{}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())!==today)location.reload()});
 </script></body></html>
