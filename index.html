@@ -17,8 +17,8 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 #ball-marker{position:absolute;width:20px;height:20px;border:1px solid #fff9;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #2032205f}
 .stage-hud{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:57%;pointer-events:none}
 .stage-hud>span,.shot-letter{background:#142018ec;padding:.38rem .55rem;border:1px solid #fff3;border-radius:6px;color:#fff;font-size:.82rem}
-.map-card{position:absolute;right:12px;top:12px;width:min(27%,260px);background:#18241dee;border:1px solid #fff4;border-radius:8px;padding:6px}
-#map{display:block;width:100%;aspect-ratio:3/1}
+.map-card{position:absolute;right:12px;top:12px;height:min(282px,calc(100% - 24px));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
+#map{display:block;width:100%;height:100%}
 #trace{position:absolute;left:12px;bottom:12px;pointer-events:none}
 .controls{display:flex;align-items:end;gap:.65rem;flex-wrap:wrap;padding:.85rem 0}
 .controls label{display:grid;gap:.25rem;color:var(--muted);font-size:.78rem}
@@ -45,7 +45,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   header{margin-bottom:.55rem;gap:.35rem}.club-brand{font-size:.63rem;letter-spacing:.1em}h1{font-size:1.8rem}
   .mode-buttons button{padding:.35rem .47rem;font-size:.84rem}.context{font-size:.76rem}
   #course{height:clamp(260px,48svh,490px)}.stage-hud{left:6px;top:6px;max-width:63%}.stage-hud>span{font-size:.72rem;padding:.3rem .42rem}
-  .map-card{right:6px;top:6px;width:34%;padding:3px}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
+  .map-card{right:6px;top:6px;height:min(218px,calc(100% - 14px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
   .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
   .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
   #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1}
@@ -58,7 +58,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div class="stage" aria-label="First-person view of Hole 6">
 <canvas id="course" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
 <div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span><span id="aim-offset" hidden></span></div>
-<div class="map-card"><canvas id="map" width="510" height="165" aria-label="Hole overview with ball, aim and flag"></canvas></div>
+<div class="map-card"><canvas id="map" width="164" height="516" role="img" aria-label="Overhead view of hole 6, with the green at the top and tee boxes at the bottom. Tracks the ball during the shot."></canvas></div>
 <div id="aim-ring" hidden></div><div id="ball-marker" hidden></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
 </div>
@@ -117,7 +117,7 @@ const surfaces = {
     sand:{bounce:.025,brake:2.75,forward:.15,entry:.63},
     bridge:{bounce:.46,brake:.6,forward:.8408,entry:1}
 };
-const windDirections=['Down','Down-right','Right','Up-right','Up','Up-left','Left','Down-left'];
+const windDirections=['Toward green','Toward green and right','Left to right','Toward tee and right','Toward tee','Toward tee and left','Right to left','Toward green and left'];
 const mphToMetresPerSecond=.44704;
 function windVector(direction,mph){
     const angle=direction*Math.PI/4,speed=mph*mphToMetresPerSecond;
@@ -650,7 +650,15 @@ function makeRenderer(canvas,map){
 }
 const $=id=>document.getElementById(id);
 const canvas=$('course'), mapCanvas=$('map'), status=$('status');
-const map=atlas();
+const map=atlas(),mapContext=mapCanvas.getContext('2d');
+const mapBounds={x:55,z:59,length:1295,width:411};
+const mapWidth=mapCanvas.width,mapHeight=mapCanvas.height;
+const mapBackdrop=document.createElement('canvas');
+mapBackdrop.width=mapWidth;mapBackdrop.height=mapHeight;
+const backdrop=mapBackdrop.getContext('2d');
+backdrop.translate(0,mapHeight);
+backdrop.rotate(-Math.PI/2);
+backdrop.drawImage(map,mapBounds.x,mapBounds.z,mapBounds.length,mapBounds.width,0,0,mapHeight,mapWidth);
 let renderer,renderError;
 try {renderer=makeRenderer(canvas,map);}
 catch(error){renderError=error.message;}
@@ -695,7 +703,7 @@ function addOptions(id,items){
     }
 }
 addOptions('club',bag.map(name=>[name,clubs[name].carry?name+' · '+clubs[name].carry+' yd':name]));
-addOptions('wind',windDirections.map((name,index)=>[index,name+' the map']));
+addOptions('wind',windDirections.map((name,index)=>[index,name]));
 let daily=true,currentDay='',challenge,stats,finished=false,presetPower=1,presetActive=false,previousClub=null,previousAim=null;
 const quantize=(value,step)=>Math.round(value/step)*step;
 function applyMode(){
@@ -715,6 +723,7 @@ function setMode(isDaily){
 }
 let heading=0,ball,strokeFrom,shotHeading,stroke=0,penalties=0,trail=[],charge=0,drag=null,keyTime=null;
 let eye,target,lastTime=0,accumulator=0,trailTime=0,shotStarted=0;
+let mapTrail=[],waterMark=null;
 const active=()=>['air','roll','drop'].includes(ball.mode);
 const editable=()=>ball.mode==='rest'&&!finished;
 const flatDistance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -737,6 +746,7 @@ function setPower(fraction){
 }
 function reset(){
     applyMode();
+    mapTrail=[];waterMark=null;
     finished=false;presetActive=false;stroke=0;penalties=0;trail=[];drag=null;keyTime=null;eye=null;target=null;
     ball=newBall(practicePoint(),ground);
     heading=angleTo(ball,settings.pin);
@@ -801,18 +811,58 @@ function updateHUD(){
     $('practice-settings').hidden=daily;
     for(const name of ['club','hit','fine-left','fine-right','power-down','power-up','hit-preset'])$(name).disabled=!editable()||!renderer;
     for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset'])$(name).disabled=active();
-    drawMap();
+    if(!active())drawMap();
+}
+function mapPoint(point){
+    return {
+        x:(point.z/scale-mapBounds.z)/mapBounds.width*mapWidth,
+        y:(1-(point.x/scale-mapBounds.x)/mapBounds.length)*mapHeight
+    };
 }
 function drawMap(){
-    const c=mapCanvas.getContext('2d'),w=mapCanvas.width,h=mapCanvas.height;
-    c.clearRect(0,0,w,h);
-    c.drawImage(map,99,103,1225,291,0,0,w,h);
-    const x=p=>(p.x/scale-99)/1225*w,z=p=>(p.z/scale-103)/291*h;
-    const pin=settings.pin;
-    c.strokeStyle='#f9efc5';c.lineWidth=2;c.beginPath();
-    c.moveTo(x(ball),z(ball));c.lineTo(x(ball)+Math.cos(heading)*60,z(ball)+Math.sin(heading)*60);c.stroke();
-    for(const [p,color,radius] of [[pin,'#f7ce79',6],[ball,'#fff',5]]){
-        c.fillStyle=color;c.strokeStyle='#263526';c.beginPath();c.arc(x(p),z(p),radius,0,Math.PI*2);c.fill();c.stroke();
+    const c=mapContext,current=mapPoint(ball),pin=mapPoint(settings.pin);
+    c.drawImage(mapBackdrop,0,0);
+    if(editable()){
+        const aimLength=$('club').value==='Putter'?Math.min(8,flatDistance(ball,settings.pin)):24;
+        const end=mapPoint({x:ball.x+Math.cos(heading)*aimLength,z:ball.z+Math.sin(heading)*aimLength});
+        const dx=end.x-current.x,dy=end.y-current.y,distance=Math.hypot(dx,dy);
+        const magnify=distance>0&&distance<13?13/distance:1;
+        c.strokeStyle='#f9efc5';c.lineWidth=3;c.beginPath();
+        c.moveTo(current.x,current.y);
+        c.lineTo(current.x+dx*magnify,current.y+dy*magnify);
+        c.stroke();
+    }
+    if(active()){
+        // Sample the trail by time, while the ball marker itself updates every frame.
+        const previous=mapTrail.at(-1);
+        if(!previous||ball.time-previous.time>=.035){
+            mapTrail.push({...current,time:ball.time});
+        }
+        while(mapTrail.length&&ball.time-mapTrail[0].time>.8)mapTrail.shift();
+        c.strokeStyle='#f9efc5';c.lineWidth=3;
+        for(let i=0;i<mapTrail.length;i++){
+            const p=mapTrail[i],next=mapTrail[i+1]||current;
+            c.globalAlpha=.67*(1-(ball.time-p.time)/.8);
+            c.beginPath();c.moveTo(p.x,p.y);c.lineTo(next.x,next.y);c.stroke();
+        }
+        c.globalAlpha=1;
+    }
+    c.lineWidth=3;c.strokeStyle='#18241d';
+    c.fillStyle='#f7ce79';
+    c.beginPath();c.arc(pin.x,pin.y,7,0,Math.PI*2);c.fill();c.stroke();
+    if(waterMark){
+        const splash=mapPoint(waterMark);
+        c.strokeStyle='#d3f7ff';c.fillStyle='#34748a';c.lineWidth=3;
+        c.beginPath();c.arc(splash.x,splash.y,11,0,Math.PI*2);c.fill();c.stroke();
+        c.beginPath();c.arc(splash.x,splash.y,4,0,Math.PI*2);c.stroke();
+    }
+    if(ball.mode!=='holed'&&ball.mode!=='drop'&&ball.mode!=='water'){
+        c.fillStyle='#fff';c.strokeStyle='#18241d';c.lineWidth=3;
+        c.beginPath();c.arc(current.x,current.y,7,0,Math.PI*2);c.fill();c.stroke();
+    }else if(ball.mode==='holed'){
+        // Centre the finishing ball in the larger pin marker.
+        c.fillStyle='#fff';
+        c.beginPath();c.arc(pin.x,pin.y,4,0,Math.PI*2);c.fill();
     }
 }
 function shoot(){
@@ -821,10 +871,12 @@ function shoot(){
     shotHeading=heading;stroke++;
     if(daily){previousClub=$('club').value;previousAim=heading;}
     presetPower=charge;trail=[];trailTime=0;shotStarted=0;
+    mapTrail=[];waterMark=null;
     ball=strike(ball,ground,$('club').value,charge,heading,surface(ball.x,ball.z));
     setPower(0);
     status.textContent='Ball in play.';
     updateHUD();
+    drawMap();
 }
 function aimBy(radians){
     if(!editable()||keyTime!==null||drag)return;
@@ -951,6 +1003,8 @@ function contactSummary(finalLie){
     return landing+(ball.cupResult||'');
 }
 function finishShot(){
+    mapTrail=[];
+    if(ball.mode==='water')waterMark={x:ball.x,z:ball.z};
     if(daily){
         finished=true;trail=[];
         const holed=ball.mode==='holed',inPlay=ball.mode==='rest'||holed;
@@ -1008,7 +1062,10 @@ function frame(now){
             }
         }
         if(!active()){finishShot();updateHUD();}
-        else if(previousMode!==ball.mode||now%150<dt*1000)updateHUD();
+        else{
+            if(previousMode!==ball.mode||now%150<dt*1000)updateHUD();
+            drawMap();
+        }
     }else accumulator=0;
     if(!active()&&!editable()&&eye&&target){
         renderer.frame(eye,target,settings.pin,ball,null,trail,shotHeading,false);
