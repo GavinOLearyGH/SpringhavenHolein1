@@ -26,6 +26,7 @@ button,select{font:inherit;color:var(--ink);background:var(--panel);border:1px s
 button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #hit{background:var(--gold);color:#252517;font-weight:750;touch-action:none;min-width:150px}
 #power-wrap{max-width:195px;flex:1 1 130px}progress{width:100%;height:12px;accent-color:var(--gold)}
+#landing-feedback{margin:0;color:var(--muted);font-size:.84rem}
 #status{flex:1;margin:0;min-height:1.5rem;align-self:center}
 .info{display:flex;gap:1rem;justify-content:space-between;flex-wrap:wrap;color:var(--muted);font-size:.85rem;margin:.35rem 0}
 .status-row{display:flex;gap:.8rem;align-items:baseline;margin:.2rem 0}.status-row strong{color:var(--gold);font-size:.81rem;white-space:nowrap}
@@ -68,6 +69,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <label id="power-wrap"><span id="power-label">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
+<p id="landing-feedback" role="status" hidden></p>
 <details id="fine"><summary>Fine aim and power</summary><div class="controls fine">
 <button id="fine-left" aria-label="Nudge aim left">←</button><button id="fine-right" aria-label="Nudge aim right">→</button>
 <button id="power-down" aria-label="Decrease preset power">−</button><button id="power-up" aria-label="Increase preset power">+</button>
@@ -79,7 +81,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <label>Wind speed<select id="wind-speed"><option value="0">Calm</option><option value="5">5 mph</option><option value="8">8 mph</option><option value="12">12 mph</option></select></label>
 <label>Practice pin<select id="pin"><option value="middle">Middle</option><option value="front">Front</option><option value="back">Back</option></select></label>
 <label>Green speed<select id="green-speed"><option value="0.8">Slow</option><option value="1" selected>Medium</option><option value="1.24">Fast</option></select></label>
-<label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="bunker">Bunker</option><option value="sidehill">Sidehill putt</option><option value="short">Short putt</option></select></label>
+<label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="wedge">Fairway wedge</option><option value="bunker">Bunker</option><option value="sidehill">Sidehill putt</option><option value="short">Short putt</option></select></label>
 <button id="reset">Reset</button>
 </div>
 <div class="info" id="controls-guide"><span>Pull down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
@@ -175,9 +177,10 @@ function strike(point,ground,club,power,heading,lie){
     const penalty=putt?1:fromSand?(loftedWedge?.74:.49):fromRough?.87:1;
     const extraLaunch=!putt&&fromSand&&loftedWedge?6:0;
     const loft=((config.launch??config.loft)+extraLaunch)*Math.PI/180;
+    const spin=putt?0:(.44+.018*config.loft)*(.45+.55*power**.8)*(fromRough?.52:fromSand?.63:1);
     return {...newBall(point,ground),vx:Math.cos(heading)*speed*Math.cos(loft)*penalty,
         vy:Math.sin(loft)*speed*penalty,vz:Math.sin(heading)*speed*Math.cos(loft)*penalty,
-        lift:(config.lift||0)*(.55+.45*power),roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
+        lift:(config.lift||0)*(.55+.45*power),spin,roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
 }
 function flagContact(from,to,pin){
     const dx=to.x-from.x,dz=to.z-from.z;
@@ -231,8 +234,27 @@ function land(ball,lie,surface,ground,from,floor){
         forward*=mix(1.04,.94,ease(descent));
     }else if(lie==='surround'){
         forward*=mix(.86,1,ease(descent/.62));
-    }else if(lie==='green'&&horizontal>10&&descent<.28){
-        forward*=mix(1.15,1,ease(descent/.28));
+    }else if(lie==='green'){
+        const firstGreen=!ball.greenContact;
+        const ux=horizontal>.001?ball.vx/horizontal:0,uz=horizontal>.001?ball.vz/horizontal:0;
+        const sample=.15;
+        const x=ball.x+ux*sample,z=ball.z+uz*sample;
+        const grade=surface(x,z)==='green'?clamp((ground(x,z)-floor)/sample,-.12,.12):0;
+        const impactDescent=Math.max(0,-ball.vy/Math.max(.01,horizontal)+grade);
+        const spin=ball.spin||0;
+        if(firstGreen){
+            ball.greenContact={x:ball.x,z:ball.z,ux,uz,angle:Math.atan2(-ball.vy,horizontal)*180/Math.PI};
+        }
+        const steep=ease((impactDescent-.34)/.68);
+        const shallow=1-ease(impactDescent/.36);
+        const check=steep*clamp(.20+.75*spin,0,1);
+        forward*=1+.16*shallow-.57*check;
+        bounce*=1-.30*check;
+        if(firstGreen&&spin>.98&&impactDescent>.90&&horizontal>=2&&horizontal<20){
+            // A steep, high-spin wedge may grip enough to come back a short distance.
+            const grip=ease((spin-.98)/.18)*ease((impactDescent-.90)/.24);
+            forward=mix(forward,-.10*Math.min(1,12/horizontal),grip);
+        }
     }
     const fromSand=surface(from.x,from.z)==='sand';
     if(fromSand||lie==='sand'){
@@ -249,6 +271,7 @@ function land(ball,lie,surface,ground,from,floor){
     ball.vx*=retained;
     ball.vz*=retained;
     ball.vy=Math.max(0,-ball.vy*bounce);
+    ball.spin=(ball.spin||0)*(lie==='green'?.46:.60);
     if(ball.vy<.62){ball.mode='roll';ball.vy=0;}
 }
 function advance(ball, course, settings, dt=stepTime){
@@ -675,7 +698,7 @@ function dayKey(now=new Date()){
 // Each forecast and pin here has a repeatable ace using the on-screen aim and power increments.
 const dailySetups=[
     ['forward','middle',0,0,1],
-    ['middle','back',3,6,1.24],
+    ['middle','back',3,6,1.24,189.16,34.66],
     ['forward','back',7,8,1.24],
     ['back','back',0,8,.8,197.15,36.05],
 ];
@@ -734,6 +757,7 @@ function practicePoint(){
     switch($('practice').value){
         case 'bank':return {x:981*scale,z:pin.z};
         case 'sidehill':return {x:pins.middle.x-3.3,z:pins.middle.z-2.4};
+        case 'wedge':return {x:134,z:39};
         case 'bunker':return {x:1190*scale,z:360*scale};
         case 'short':return {x:pin.x-.35,z:pin.z-.829};
         default:return settings.tee;
@@ -747,6 +771,7 @@ function setPower(fraction){
 function reset(){
     applyMode();
     mapTrail=[];waterMark=null;
+    $('landing-feedback').hidden=true;
     finished=false;presetActive=false;stroke=0;penalties=0;trail=[];drag=null;keyTime=null;eye=null;target=null;
     ball=newBall(practicePoint(),ground);
     heading=angleTo(ball,settings.pin);
@@ -754,7 +779,8 @@ function reset(){
     const suggested=[...bag].reverse().find(name=>clubs[name].carry>=carry)||'3 Iron';
     const lie=surface(ball.x,ball.z);
     $('club').value=daily&&previousClub?previousClub:
-        lie==='green'?'Putter':lie==='sand'||!daily&&$('practice').value==='bank'?'SW':suggested;
+        lie==='green'?'Putter':lie==='sand'||!daily&&$('practice').value==='bank'?'SW':
+        !daily&&$('practice').value==='wedge'?'LW':suggested;
     if(daily&&previousAim!==null)heading=previousAim;
     setPower($('fine').open?presetPower:0);
     status.textContent=renderer?'Pull back to set your shot.':renderError;
@@ -872,6 +898,7 @@ function shoot(){
     if(daily){previousClub=$('club').value;previousAim=heading;}
     presetPower=charge;trail=[];trailTime=0;shotStarted=0;
     mapTrail=[];waterMark=null;
+    $('landing-feedback').hidden=true;
     ball=strike(ball,ground,$('club').value,charge,heading,surface(ball.x,ball.z));
     setPower(0);
     status.textContent='Ball in play.';
@@ -1002,7 +1029,17 @@ function contactSummary(finalLie){
     if(ball.bunkerLip)return landing+'Caught the bunker lip. ';
     return landing+(ball.cupResult||'');
 }
+function showLandingFeedback(){
+    const landing=ball.greenContact,feedback=$('landing-feedback');
+    if(daily||!landing)return;
+    const distance=(ball.x-landing.x)*landing.ux+(ball.z-landing.z)*landing.uz;
+    const amount=Math.abs(distance);
+    const release=amount<.15?'Little forward release':(distance>0?'Released ':'Finished back by ')+leave(amount);
+    feedback.textContent='Landed on green at '+Math.round(landing.angle)+'° · '+release;
+    feedback.hidden=false;
+}
 function finishShot(){
+    showLandingFeedback();
     mapTrail=[];
     if(ball.mode==='water')waterMark={x:ball.x,z:ball.z};
     if(daily){
