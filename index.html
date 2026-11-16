@@ -15,6 +15,9 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 #course:active{cursor:grabbing}
 #aim-ring{position:absolute;width:19px;height:19px;border:2px solid #ffe196;border-radius:50%;box-shadow:0 0 0 1px #342819;pointer-events:none;transform:translate(-50%,-50%);opacity:.95}
 #ball-marker{position:absolute;width:20px;height:20px;border:1px solid #fff9;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #2032205f}
+#ball-marker.grabbed{width:27px;height:27px;border:2px solid #ffe9ad;box-shadow:0 0 0 2px #22322299,0 0 12px #ffd87b8c}
+#pull-handle{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:32px;height:32px;border:2px solid #ffe9ad;border-radius:50%;background:#18241d2b;box-shadow:0 0 0 2px #162219a8,0 2px 8px #17231288}
+#pull-tether{position:absolute;pointer-events:none;height:2px;background:#ffe4a3;box-shadow:0 1px 3px #172312b3;transform-origin:left center;border-radius:2px}
 .stage-hud{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:57%;pointer-events:none}
 .stage-hud>span,.shot-letter{background:#142018ec;padding:.38rem .55rem;border:1px solid #fff3;border-radius:6px;color:#fff;font-size:.82rem}
 .map-card{position:absolute;right:12px;top:12px;height:min(282px,calc(100% - 24px));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
@@ -61,6 +64,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span><span id="aim-offset" hidden></span></div>
 <div class="map-card"><canvas id="map" width="164" height="516" role="img" aria-label="Overhead view of hole 6, with the green at the top and tee boxes at the bottom. Tracks the ball during the shot."></canvas></div>
 <div id="aim-ring" hidden></div><div id="ball-marker" hidden></div>
+<div id="pull-tether" hidden aria-hidden="true"></div><div id="pull-handle" hidden aria-hidden="true"></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
 </div>
 <div class="controls shot-controls" aria-label="Shot controls">
@@ -610,7 +614,7 @@ function makeRenderer(canvas,map){
         const width=Math.round(canvas.clientWidth*ratio),height=Math.round(canvas.clientHeight*ratio);
         const still=ball.mode==='rest'||ball.mode==='holed'||ball.mode==='water'||ball.mode==='out';
         if(still){
-            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,aim?.pulling,trail.length].join();
+            const view=[width,height,...eye,...target,ball.x,ball.y,ball.z,ball.mode,pin.x,pin.z,aim?.x,aim?.z,aim?.pulling,aim?.distance,trail.length].join();
             if(lastStatic===view)return;
             lastStatic=view;
         }else lastStatic=null;
@@ -630,15 +634,15 @@ function makeRenderer(canvas,map){
         post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
         triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
         if(aim){
-            disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
+            if(!aim.pulling)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
             if(aim.pulling){
                 const dx=Math.cos(aim.heading),dz=Math.sin(aim.heading);
-                const length=Math.min(aim.distance,aim.near?5:14),width=aim.near?.019:.037;
+                const length=aim.distance,width=aim.near?.019:.037;
                 for(let start=.23;start<length;start+=aim.near?.28:1.05){
                     const end=Math.min(length,start+(aim.near?.17:.66));
                     const stripe=(distance,side)=>{
                         const x=ball.x+dx*distance-dz*side,z=ball.z+dz*distance+dx*side;
-                        return [x,ground(x,z)+.035,z];
+                        return [x,Math.max(ground(x,z),waterHeight)+.035,z];
                     };
                     quad(moving,stripe(start,-width),stripe(start,width),stripe(end,width),stripe(end,-width),[.99,.85,.51]);
                 }
@@ -673,6 +677,7 @@ function makeRenderer(canvas,map){
 }
 const $=id=>document.getElementById(id);
 const canvas=$('course'), mapCanvas=$('map'), status=$('status');
+const ballMarker=$('ball-marker'),pullHandle=$('pull-handle'),pullTether=$('pull-tether');
 const map=atlas(),mapContext=mapCanvas.getContext('2d');
 const mapBounds={x:55,z:59,length:1295,width:411};
 const mapWidth=mapCanvas.width,mapHeight=mapCanvas.height;
@@ -816,7 +821,10 @@ function updateHUD(){
     const offset=(heading-angleTo(ball,settings.pin))*180/Math.PI;
     $('aim-offset').hidden=!editable();
     $('aim-offset').textContent=Math.abs(offset)<.007?'On pin':Math.abs(offset).toFixed(2)+'° '+(offset>0?'right':'left')+' of pin';
-    $('hit').classList.toggle('pulling',drag?.kind==='shot');
+    const pulling=drag?.kind==='shot';
+    $('hit').classList.toggle('pulling',pulling);
+    ballMarker.classList.toggle('grabbed',pulling);
+    if(!pulling)pullHandle.hidden=pullTether.hidden=true;
     $('carry').hidden=!Number.isFinite(carry);
     if(Number.isFinite(carry))$('carry').textContent='Wall · '+yards(carry)+' yd';
     const isPutting=editable()&&lie==='green';
@@ -845,14 +853,16 @@ function mapPoint(point){
         y:(1-(point.x/scale-mapBounds.x)/mapBounds.length)*mapHeight
     };
 }
+const pullAimDistance=putt=>(putt?4.2:26)*charge**.82;
 function drawMap(){
     const c=mapContext,current=mapPoint(ball),pin=mapPoint(settings.pin);
     c.drawImage(mapBackdrop,0,0);
     if(editable()){
-        const aimLength=$('club').value==='Putter'?Math.min(8,flatDistance(ball,settings.pin)):24;
+        const putt=$('club').value==='Putter',pulling=drag?.kind==='shot';
+        const aimLength=pulling?pullAimDistance(putt):putt?Math.min(8,flatDistance(ball,settings.pin)):24;
         const end=mapPoint({x:ball.x+Math.cos(heading)*aimLength,z:ball.z+Math.sin(heading)*aimLength});
         const dx=end.x-current.x,dy=end.y-current.y,distance=Math.hypot(dx,dy);
-        const magnify=distance>0&&distance<13?13/distance:1;
+        const magnify=!pulling&&distance>0&&distance<13?13/distance:1;
         c.strokeStyle='#f9efc5';c.lineWidth=3;c.beginPath();
         c.moveTo(current.x,current.y);
         c.lineTo(current.x+dx*magnify,current.y+dy*magnify);
@@ -916,7 +926,7 @@ function beginDrag(event,kind){
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     const room=(window.visualViewport?.height||window.innerHeight||800)-event.clientY-14;
-    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind,charge,
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,aim:heading,kind,charge,dx:0,depth:0,
         travel:clamp(room,126,210)};
     if(kind==='shot'){
         setPower(0);
@@ -951,6 +961,7 @@ function previewDrag(event){
         turn=-Math.sign(dx)*(.00025*width+.000014*Math.max(0,width-16)**2);
         turn=clamp(turn,-.48,.48);
         const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
+        drag.dx=dx;drag.depth=depth;
         // Give high-power shots more physical travel for precise distance control.
         setPower(depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58);
     }else{
@@ -1081,6 +1092,27 @@ function showMarker(element,point){
     element.hidden=!point||point.x<6||point.x>canvas.clientWidth-6||point.y<6||point.y>canvas.clientHeight-6;
     if(!element.hidden){element.style.left=point.x+'px';element.style.top=point.y+'px';}
 }
+function drawPullHandle(anchor){
+    if(drag?.kind!=='shot')return;
+    if(ballMarker.hidden){pullHandle.hidden=pullTether.hidden=true;return;}
+    const inset=18;
+    const room=Math.max(0,canvas.clientHeight-inset-anchor.y);
+    // Compress the gesture so the handle stays inside the view and above the finger.
+    const y=anchor.y+Math.min(54,room)*drag.depth;
+    const x=clamp(anchor.x+clamp(drag.dx*.62,-76,76),inset,canvas.clientWidth-inset);
+    const dx=x-anchor.x,dy=y-anchor.y,length=Math.hypot(dx,dy);
+    pullHandle.hidden=length<6;
+    pullTether.hidden=length<17;
+    if(pullHandle.hidden)return;
+    pullHandle.style.left=x+'px';
+    pullHandle.style.top=y+'px';
+    if(pullTether.hidden)return;
+    const start=8/length;
+    pullTether.style.left=anchor.x+dx*start+'px';
+    pullTether.style.top=anchor.y+dy*start+'px';
+    pullTether.style.width=length-16+'px';
+    pullTether.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+}
 function frame(now){
     const dt=Math.min((now-(lastTime||now))/1000,.06);
     lastTime=now;
@@ -1106,7 +1138,7 @@ function frame(now){
     }else accumulator=0;
     if(!active()&&!editable()&&eye&&target){
         renderer.frame(eye,target,settings.pin,ball,null,trail,shotHeading,false);
-        showMarker($('aim-ring'),null);showMarker($('ball-marker'),null);
+        showMarker($('aim-ring'),null);showMarker(ballMarker,null);
         requestAnimationFrame(frame);
         return;
     }
@@ -1117,18 +1149,22 @@ function frame(now){
     const back=following?5.7:near?1.8:2.5;
     const ex=ball.x-forwardX*back,ez=ball.z-forwardZ*back;
     const ey=following?Math.max(ground(ex,ez)+2.2,ball.y-1.2):ground(ball.x,ball.z)+(near?1.2:1.62);
-    const aimDist=near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
+    const aimDist=pulling?pullAimDistance(near):
+        near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
     const aimX=clamp(ball.x+Math.cos(heading)*aimDist,0,courseWidth),aimZ=clamp(ball.z+Math.sin(heading)*aimDist,0,courseDepth);
     const desiredEye=[ex,ey,ez];
+    // Keep enough ground below the ready ball for the pullback handle on short screens.
     const desiredTarget=following?[ball.x+forwardX*6,ball.y-.05,ball.z+forwardZ*6]:
-        [ball.x+forwardX*(near?5.5:14),ground(ball.x,ball.z)-(near?1.18:.9),ball.z+forwardZ*(near?5.5:14)];
+        [ball.x+forwardX*(near?5.5:14),ground(ball.x,ball.z)-(near?1.68:2.30),ball.z+forwardZ*(near?5.5:14)];
     const smooth=following?1-Math.exp(-dt*9):1;
     eye=eye?eye.map((n,i)=>mix(n,desiredEye[i],smooth)):desiredEye;
     target=target?target.map((n,i)=>mix(n,desiredTarget[i],smooth)):desiredTarget;
     const aim=editable()?{x:aimX,y:Math.max(ground(aimX,aimZ),waterHeight),z:aimZ,near,pulling,heading,distance:aimDist}:null;
     renderer.frame(eye,target,settings.pin,ball,aim,trail,h,following);
-    showMarker($('aim-ring'),aim?renderer.project(aim.x,aim.y+.09,aim.z):null);
-    showMarker($('ball-marker'),editable()?renderer.project(ball.x,ball.y+.022,ball.z):null);
+    showMarker($('aim-ring'),aim&&(!pulling||charge>=.12)?renderer.project(aim.x,aim.y+.09,aim.z):null);
+    const anchor=editable()?renderer.project(ball.x,ball.y+.022,ball.z):null;
+    showMarker(ballMarker,anchor);
+    drawPullHandle(anchor);
     requestAnimationFrame(frame);
 }
 reset();
