@@ -24,7 +24,16 @@
 #gestureHint{position:absolute;z-index:3;bottom:calc(130px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);pointer-events:none;color:#fff7d7;font-size:11px;font-weight:700;text-shadow:0 1px 7px #123;white-space:nowrap;background:#0a281c88;border-radius:15px;padding:5px 10px}
 #app.inflight #gestureHint,#app.finished #gestureHint{display:none}
 @media(max-height:750px){#hud .stat{padding:6px}#gestureHint{bottom:calc(116px + env(safe-area-inset-bottom))}#bottom{padding:5px}.club{padding:6px 2px}}
-</style></head><body><div id="app"><canvas id="course"></canvas><div id="hud"><div class="stat"><small>SPRINGHAVEN · 06</small><b id="yardage">162 yd</b><span id="pinlabel">PAR 3 · TEE</span></div><div class="stat wind"><div id="windArrow" class="arrow">↑</div><div><small>WIND</small><b id="windSpeed">8 mph</b><span id="windDirection">Toward green</span></div></div></div><div id="topright"><button id="menuBtn" aria-label="Menu">☰</button><button id="helpBtn" aria-label="Help">?</button></div><div id="title">THE IRISH PAR × SPRINGHAVEN<br><span id="mode">THE DAILY ACE</span></div><div id="power"><div id="powerFill"></div></div><div id="powerLabel">0%</div><div id="instruction"></div><div id="gestureHint">↙ ↓ ↘ DRAG TO AIM & SHOOT</div><div id="bottom"><div id="clubs"></div><div id="choices"><button id="shapeDown">◀</button><span id="shapeText">Straight</span><button id="shapeUp">▶</button><div class="sep"></div><button id="flightDown">▼</button><span id="flightText">Normal</span><button id="flightUp">▲</button></div></div><div id="result"><div id="resultTag" style="color:#e5cc90;font-size:11px;letter-spacing:.14em;font-weight:800">TODAY'S SHOT</div><h2 id="resultTitle"></h2><p id="resultText"></p><button id="again" style="display:none">↻ ANOTHER PRACTICE SHOT</button><button id="share" class="secondary">SHARE RESULT</button><div id="countdown"></div></div><div id="menu" class="modal"><button class="close" data-close="menu">CLOSE ×</button><h2>Springhaven Six</h2><p>One shot. Every day. Chase the ace on a stylized version of Springhaven No. 6.</p><a href="?practice=1">PRACTICE · UNLIMITED SHOTS</a><a href="./" class="secondary">OFFICIAL DAILY CHALLENGE</a><p>Practice does not affect your official daily result or streak. The daily challenge is enforced locally on this device during testing.</p><h3>Last 7 days</h3><div id="history" class="history"></div><p id="streak"></p><p style="font-size:12px">Prototype v0.6 · TIP Studio · Build the Bag. Build the Player.</p></div><div id="help" class="modal"><button class="close" data-close="help">CLOSE ×</button><h2>How to play</h2><p>1. Choose your club and optional shot shape / trajectory at the bottom.</p><p>2. Touch the ball near the tee, drag your finger downward to build power. Drag diagonally to set the launch direction.</p><p>3. Release to hit. The camera follows the ball as it flies, lands and rolls.</p><p>4. Chase the ace, or see how close you can finish. Practice as often as you like.</p><p>Wind arrow points in the direction the wind is blowing. Daily conditions are identical for everyone on the same date.</p></div></div>
+
+/* v0.9: native touch gestures belong to the game, not the browser */
+html,body,#app,#course{touch-action:none!important;user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
+button,a{touch-action:manipulation}
+#course{cursor:crosshair}
+#debug{position:absolute;z-index:7;left:9px;top:calc(117px + env(safe-area-inset-top));background:#09251cdd;border:1px solid #66816a;border-radius:10px;color:#eaf3e7;font:10px/1.45 ui-monospace,monospace;padding:9px;white-space:pre;pointer-events:none;display:none}
+#debug.on{display:block}
+#debugBtn{font-size:14px!important}
+#gestureHint{pointer-events:none}
+</style></head><body><div id="app"><canvas id="course"></canvas><div id="hud"><div class="stat"><small>SPRINGHAVEN · 06</small><b id="yardage">162 yd</b><span id="pinlabel">PAR 3 · TEE</span></div><div class="stat wind"><div id="windArrow" class="arrow">↑</div><div><small>WIND</small><b id="windSpeed">8 mph</b><span id="windDirection">Toward green</span></div></div></div><div id="topright"><button id="menuBtn" aria-label="Menu">☰</button><button id="helpBtn" aria-label="Help">?</button><button id="debugBtn" aria-label="Physics telemetry">∑</button></div><div id="debug"></div><div id="title">THE IRISH PAR × SPRINGHAVEN<br><span id="mode">THE DAILY ACE</span></div><div id="power"><div id="powerFill"></div></div><div id="powerLabel">0%</div><div id="instruction"></div><div id="gestureHint">↙ ↓ ↘ DRAG TO AIM & SHOOT</div><div id="bottom"><div id="clubs"></div><div id="choices"><button id="shapeDown">◀</button><span id="shapeText">Straight</span><button id="shapeUp">▶</button><div class="sep"></div><button id="flightDown">▼</button><span id="flightText">Normal</span><button id="flightUp">▲</button></div></div><div id="result"><div id="resultTag" style="color:#e5cc90;font-size:11px;letter-spacing:.14em;font-weight:800">TODAY'S SHOT</div><h2 id="resultTitle"></h2><p id="resultText"></p><button id="again" style="display:none">↻ ANOTHER PRACTICE SHOT</button><button id="share" class="secondary">SHARE RESULT</button><div id="countdown"></div></div><div id="menu" class="modal"><button class="close" data-close="menu">CLOSE ×</button><h2>Springhaven Six</h2><p>One shot. Every day. Chase the ace on a stylized version of Springhaven No. 6.</p><a href="?practice=1">PRACTICE · UNLIMITED SHOTS</a><a href="./" class="secondary">OFFICIAL DAILY CHALLENGE</a><p>Practice does not affect your official daily result or streak. The daily challenge is enforced locally on this device during testing.</p><h3>Last 7 days</h3><div id="history" class="history"></div><p id="streak"></p><p style="font-size:12px">Prototype v0.9 · TIP Studio · Build the Bag. Build the Player.</p></div><div id="help" class="modal"><button class="close" data-close="help">CLOSE ×</button><h2>How to play</h2><p>1. Choose your club and optional shot shape / trajectory at the bottom.</p><p>2. Touch the ball near the tee, drag your finger downward to build power. Drag diagonally to set the launch direction.</p><p>3. Release to hit. The camera follows the ball as it flies, lands and rolls.</p><p>4. Chase the ace, or see how close you can finish. Practice as often as you like.</p><p>Wind arrow points in the direction the wind is blowing. Daily conditions are identical for everyone on the same date.</p></div></div>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id),app=$('app'),canvas=$('course'),ctx=canvas.getContext('2d');
@@ -48,7 +57,7 @@ function renderClubs(){[...clubBar.children].forEach((b,i)=>b.classList.toggle('
 renderClubs();
 function controls(){if(phase!=='ready')return;$('shapeText').textContent=shapes[shape];$('flightText').textContent=flights[flight]}
 $('shapeDown').onclick=()=>{shape=(shape+2)%3;controls()};$('shapeUp').onclick=()=>{shape=(shape+1)%3;controls()};$('flightDown').onclick=()=>{flight=Math.max(0,flight-1);controls()};$('flightUp').onclick=()=>{flight=Math.min(2,flight+1);controls()};controls();
-$('menuBtn').onclick=()=>{history();$('menu').classList.add('open')};$('helpBtn').onclick=()=>$('help').classList.add('open');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=() =>$(b.dataset.close).classList.remove('open'));
+$('debugBtn').onclick=()=>{$('debug').classList.toggle('on')};$('menuBtn').onclick=()=>{history();$('menu').classList.add('open')};$('helpBtn').onclick=()=>$('help').classList.add('open');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=() =>$(b.dataset.close).classList.remove('open'));
 function history(){let days=get(daysKey,[]),n=0,d=new Date(today+'T12:00:00Z');if(!days.includes(today))d.setUTCDate(d.getUTCDate()-1);while(days.includes(d.toISOString().slice(0,10))){n++;d.setUTCDate(d.getUTCDate()-1)}$('streak').textContent='🔥 '+n+' day streak';$('history').replaceChildren();for(let i=6;i>=0;i--){let dt=new Date(today+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()-i);let k=dt.toISOString().slice(0,10),el=document.createElement('div');el.textContent=dt.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'})+' '+(days.includes(k)?'✓':'—');$('history').appendChild(el)}}
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
 function oval(x,y,rx,ry,color,rot=0){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,0,Math.max(.1,rx),Math.max(.1,ry),0,0,Math.PI*2);ctx.fill();ctx.restore()}
@@ -72,12 +81,107 @@ function pointer(e){let r=canvas.getBoundingClientRect();return {x:e.clientX-r.l
 canvas.addEventListener('pointerdown',e=>{if(phase!=='ready')return;e.preventDefault();let p=pointer(e);drag={startX:p.x,startY:p.y,x:p.x,y:p.y,aim:0,power:0,angle:0};phase='drag';canvas.setPointerCapture(e.pointerId);$('instruction').textContent='Drag angle sets direction · length sets power';draw()});
 canvas.addEventListener('pointermove',e=>{if(phase!=='drag')return;e.preventDefault();let p=pointer(e);drag.x=p.x;drag.y=p.y;drag.power=Math.min(110,Math.max(0,(p.y-drag.startY)/Math.max(100,H*.16)*100));let dx=p.x-drag.startX,dy=Math.max(1,p.y-drag.startY);drag.angle=Math.max(-.24,Math.min(.24,-Math.atan2(dx,dy)));drag.aim=Math.tan(drag.angle)*yard;updatePower(drag.power);draw()});
 canvas.addEventListener('pointerup',e=>{if(phase!=='drag')return;e.preventDefault();let power=drag.power,aim=drag.aim;drag=null;if(power<15){phase='ready';$('instruction').textContent='Pull farther down to build power';updatePower(0);draw();return}launch(power,aim)});
-canvas.addEventListener('pointercancel',()=>{if(phase==='drag'){drag=null;phase='ready';updatePower(0);draw()}});
-function launch(power,aim){phase='flight';app.classList.add('inflight');let base=clubs.find(c=>c[0]===club)[1],carry=base*power/100*(1+(flight-1)*.025)+windY*.48,finalX=aim*(carry/yard)+windX*.45+(shape-1)*5,apex=34+(flight-1)*9,start=performance.now();shot={camera:0,ball:{x:0,y:0,z:0}};trail=[];const duration=4300;
-function frame(now){if(phase!=='flight')return;let t=Math.min(1,(now-start)/duration),u=t*t*(3-2*t);let x=finalX*u,y=carry*u,z=Math.sin(Math.PI*u)*apex;shot.ball={x,y,z};shot.camera=Math.max(0,y-yard*.30);trail.push({...shot.ball});if(trail.length>65)trail.shift();draw();if(t<1){frameId=requestAnimationFrame(frame);return}
-let water=y>yard*.36&&y<yard*.70,green=Math.hypot(x-pinX,(y-pinY)*1.15)<24,roll=(flight===0?12:flight===2?3:7),endX=x+windX*.04,endY=y+roll*(green?.55:.75),dist=Math.hypot(endX-pinX,endY-pinY),result={water,ace:!water&&green&&dist<.18,dist:water?999:dist,x:endX,y:endY};if(water){shot.ball=null;finish(result);return}
-let rollingStart=performance.now();function rolling(time){if(phase!=='flight')return;let v=Math.min(1,(time-rollingStart)/1700),ease=1-Math.pow(1-v,2);shot.ball={x:x+(endX-x)*ease,y:y+(endY-y)*ease,z:0};shot.camera=Math.max(0,shot.ball.y-yard*.3);draw();if(v<1)frameId=requestAnimationFrame(rolling);else finish(result)}frameId=requestAnimationFrame(rolling)}
-frameId=requestAnimationFrame(frame)}
+canvas.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());document.addEventListener('dragstart',e=>e.preventDefault());canvas.addEventListener('pointercancel',()=>{if(phase==='drag'){drag=null;phase='ready';updatePower(0);draw()}});
+
+/* SI-unit flight engine. Coordinates: x=right (m), y=downrange (m), z=up (m).
+   Approximate aerodynamic coefficients; calibration is required for launch monitor fidelity. */
+const M=0.04593,R=0.021335,A=Math.PI*R*R,RHO=1.225,G=9.80665;
+const MPH=0.44704,YD=0.9144;
+const profiles={
+ PW:{speed:38.5,angle:29,spin:8200},'9i':{speed:42,angle:25,spin:7600},
+ '8i':{speed:45,angle:22,spin:6900},'7i':{speed:48.5,angle:19,spin:6200},
+ '6i':{speed:52,angle:16,spin:5500},'5i':{speed:55,angle:14,spin:4800}
+};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function sim(power,aim){
+ const profile=profiles[club],flightDelta=flight-1;
+ const speed=profile.speed*power/100,launch=(profile.angle+flightDelta*3.2)*Math.PI/180;
+ // aim is lateral yards at the pin; use the launch angle, not a destination offset
+ const heading=Math.atan2(aim,yard*YD);
+ const spin=profile.spin*(1+flightDelta*.07),axis=(shape-1)*.12;
+ let v={x:speed*Math.cos(launch)*Math.sin(heading),y:speed*Math.cos(launch)*Math.cos(heading),z:speed*Math.sin(launch)};
+ let p={x:0,y:0,z:.04},t=0,dt=.008,points=[{...p,t:0}],apex=0,land=null;
+ const wx=windX*MPH,wy=windY*MPH;
+ function acceleration(q){
+   let air={x:q.x-wx,y:q.y-wy,z:q.z},mag=Math.hypot(air.x,air.y,air.z)||1;
+   let spinRatio=R*(spin*2*Math.PI/60)/mag;
+   let cd=clamp(.24+.065*spinRatio,.22,.36);
+   let cl=clamp(.08+.42*spinRatio,.07,.32);
+   let factor=.5*RHO*A/M*mag;
+   // Backspin lift is perpendicular to relative air velocity; tilted spin axis adds curve.
+   let up={x:-air.x*air.z/(mag*mag),y:-air.y*air.z/(mag*mag),z:1-air.z*air.z/(mag*mag)};
+   let ul=Math.hypot(up.x,up.y,up.z)||1;up.x/=ul;up.y/=ul;up.z/=ul;
+   let side={x:air.y/mag,y:-air.x/mag,z:0};
+   return {x:-factor*cd*air.x+factor*cl*mag*(up.x*Math.cos(axis)+side.x*Math.sin(axis)),
+           y:-factor*cd*air.y+factor*cl*mag*(up.y*Math.cos(axis)+side.y*Math.sin(axis)),
+           z:-G-factor*cd*air.z+factor*cl*mag*up.z*Math.cos(axis)};
+ }
+ // Midpoint integration improves stability relative to explicit Euler.
+ for(let i=0;i<2200;i++){
+   let a=acceleration(v),mid={x:v.x+a.x*dt/2,y:v.y+a.y*dt/2,z:v.z+a.z*dt/2},am=acceleration(mid);
+   let next={x:p.x+mid.x*dt,y:p.y+mid.y*dt,z:p.z+mid.z*dt};
+   v.x+=am.x*dt;v.y+=am.y*dt;v.z+=am.z*dt;t+=dt;
+   if(next.z<=0&&t>.15){let frac=p.z/(p.z-next.z);land={x:p.x+(next.x-p.x)*frac,y:p.y+(next.y-p.y)*frac,z:0,t:t-dt+dt*frac,v:{...v}};points.push(land);break}
+   p=next;apex=Math.max(apex,p.z);if(i%4===0)points.push({...p,t});
+ }
+ if(!land)land={...p,t,v:{...v}};
+ let carry=land.y/YD,lateral=land.x/YD,landingAngle=Math.atan2(-land.v.z,Math.hypot(land.v.x,land.v.y))*180/Math.PI;
+ // Ground model: surface friction + restitution + simplified green slope, timestep integration.
+ let surface=(x,y)=>{let yy=y/YD,xx=x/YD;if(yy>yard*.35&&yy<yard*.70&&Math.abs(xx)<48)return 'water';if(Math.hypot(xx-pinX,(yy-pinY)*1.15)<24)return 'green';return 'rough'};
+ let water=surface(land.x,land.y)==='water';
+ let pos={x:land.x,y:land.y},vel={x:land.v.x*.20,y:land.v.y*.20};
+ let groundPoints=[],rollTime=0,rollDistance=0;
+ if(!water){
+   // landing angle & spin affect horizontal bounce/roll energy
+   let retain=clamp(.48-landingAngle*.005-(spin/9000)*.13,.07,.38);
+   vel.x=land.v.x*retain;vel.y=land.v.y*retain;
+   for(let i=0;i<1200;i++){
+     let ground=surface(pos.x,pos.y);
+     if(ground==='water'){water=true;break}
+     let friction=ground==='green'?.16:.42,spd=Math.hypot(vel.x,vel.y);
+     if(spd<.12)break;
+     let decel=G*friction,ax=-decel*vel.x/spd,ay=-decel*vel.y/spd;
+     if(ground==='green'){ax+=.11;ay-=.08} // illustrative green slope, not surveyed contours
+     vel.x+=ax*.016;vel.y+=ay*.016;
+     let nx=pos.x+vel.x*.016,ny=pos.y+vel.y*.016;
+     rollDistance+=Math.hypot(nx-pos.x,ny-pos.y);pos.x=nx;pos.y=ny;rollTime+=.016;
+     if(i%3===0)groundPoints.push({x:pos.x,y:pos.y,z:0,t:land.t+rollTime});
+   }
+ }
+ const dist=Math.hypot(pos.x/YD-pinX,pos.y/YD-pinY),ace=!water&&dist<.18;
+ return {points,groundPoints,land,carry,lateral,apex:apex/YD,landingAngle,hang:t,spin,speed:speed/MPH,water,ace,dist:water?999:dist,x:pos.x/YD,y:pos.y/YD,roll:rollDistance/YD};
+}
+function launch(power,aim){
+ phase='flight';app.classList.add('inflight');
+ const result=sim(power,aim),path=result.points.concat(result.groundPoints),start=performance.now();
+ shot={camera:0,ball:{x:0,y:0,z:0}};trail=[];
+ const duration=6700,flightFraction=.78;
+ const sample=(t)=>{
+   let arr=t<=result.land.t?result.points:result.groundPoints;
+   if(!arr.length)return result.land;
+   let lo=0,hi=arr.length-1;
+   while(lo<hi){let mid=(lo+hi)>>1;if(arr[mid].t<t)lo=mid+1;else hi=mid}
+   if(lo===0)return arr[0];let a=arr[lo-1],b=arr[lo],u=clamp((t-a.t)/(b.t-a.t||1),0,1);
+   return {x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,z:a.z+(b.z-a.z)*u};
+ };
+ const flightTime=result.land.t,rollTime=result.groundPoints.length?result.groundPoints.at(-1).t-flightTime:0;
+ function frame(now){
+   if(phase!=='flight')return;
+   let u=clamp((now-start)/duration,0,1);
+   let t=u<flightFraction?u/flightFraction*flightTime:flightTime+(u-flightFraction)/(1-flightFraction)*rollTime;
+   let q=sample(t),ball={x:q.x/YD,y:q.y/YD,z:q.z/YD};
+   shot.ball=ball;shot.camera=Math.max(0,ball.y-yard*.30);
+   trail.push({...ball});if(trail.length>110)trail.shift();draw();
+   $('debug').textContent='BALL PHYSICS · '+(practice?'PRACTICE':'DAILY')+'\n'+
+     'Speed '+result.speed.toFixed(1)+' mph | Spin '+result.spin.toFixed(0)+' rpm\n'+
+     'Carry '+result.carry.toFixed(1)+' yd | Side '+result.lateral.toFixed(1)+' yd\n'+
+     'Apex '+result.apex.toFixed(1)+' yd | Hang '+result.hang.toFixed(2)+' s\n'+
+     'Landing '+result.landingAngle.toFixed(1)+'° | Roll '+result.roll.toFixed(1)+' yd\n'+
+     'Wind '+windSpeed+' mph | '+Math.round(power)+'% power';
+   if(u<1){frameId=requestAnimationFrame(frame)}else finish(result);
+ }
+ frameId=requestAnimationFrame(frame);
+}
 function finish(r){phase='done';lastResult=r;app.classList.remove('inflight');app.classList.add('finished');if(!practice){try{localStorage.setItem(key,JSON.stringify(r));let days=get(daysKey,[]);if(!days.includes(today))days.push(today);localStorage.setItem(daysKey,JSON.stringify(days))}catch(e){console.warn(e)}}showResult()}
 function showResult(){let r=lastResult;if(!r)return;$('resultTag').textContent=practice?'PRACTICE SHOT':'OFFICIAL DAILY SHOT';$('resultTitle').textContent=r.ace?'⛳ HOLE IN ONE!':r.water?'💦 IN THE WATER':r.dist<2?'SO CLOSE!':r.dist.toFixed(1)+' YARDS AWAY';$('resultText').textContent=r.water?'The pond wins this round.':'Final distance: '+r.dist.toFixed(2)+' yards.';$('again').style.display=practice?'block':'none';$('countdown').textContent=practice?'Unlimited practice · no streak changes':'Next official shot unlocks at midnight Eastern';$('result').style.display='block';draw()}
 $('again').onclick=()=>{cancelAnimationFrame(frameId);phase='ready';shot=null;trail=[];lastResult=null;app.classList.remove('finished','inflight');$('result').style.display='none';$('instruction').textContent='Drag down to set power and direction · release';updatePower(0);draw()};
