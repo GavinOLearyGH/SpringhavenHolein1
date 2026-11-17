@@ -19,15 +19,11 @@ const db=mysql.createPool({
 const service=import('./leaderboard.mjs');
 const page=readFile(path.join(__dirname,'generated/public/index.html'),'utf8').then(html=>
     html.replaceAll('https://gavinolearygh.github.io/TIPOS_V3.0/daily-challenge/',canonical));
-const saveScore=`
-    INSERT INTO scores (day, player, name, ace, mm, posted, score_rank)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-        name = IF(VALUES(score_rank) < score_rank, VALUES(name), name),
-        ace = IF(VALUES(score_rank) < score_rank, VALUES(ace), ace),
-        mm = IF(VALUES(score_rank) < score_rank, VALUES(mm), mm),
-        posted = IF(VALUES(score_rank) < score_rank, VALUES(posted), posted),
-        score_rank = LEAST(score_rank, VALUES(score_rank))`;
+async function readAttempt(day,player){
+    const {attemptQuery}=await service;
+    const [rows]=await db.execute(attemptQuery,[day,player]);
+    return rows[0];
+}
 async function readBoard(day){
     const {boardResponse,topQuery,distributionQuery}=await service;
     const connection=await db.getConnection();
@@ -47,10 +43,20 @@ async function readBoard(day){
 }
 const store={
     read:readBoard,
-    async save({day,player,name,ace,mm,posted}){
-        // Update rank last so every assignment compares with the original score.
-        const [result]=await db.execute(saveScore,[day,player,name,Number(ace),mm,posted,ace?0:mm+1]);
-        return result.affectedRows>0;
+    readAttempt,
+    async recordAttempt({day,player,id,outcome,ace,mm}){
+        await db.execute(`
+            INSERT INTO daily_attempts (day, player, id, outcome, ace, mm) VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE id = daily_attempts.id`,[day,player,id,outcome,Number(ace),mm]);
+        return readAttempt(day,player);
+    },
+    async publish({day,player,name,ace,mm,posted}){
+        await db.execute(`
+            INSERT INTO scores (day, player, name, ace, mm, posted, score_rank) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE player = scores.player`,[day,player,name,Number(ace),mm,posted,ace?0:mm+1]);
+        const {publishedQuery}=await service;
+        const [rows]=await db.execute(publishedQuery,[day,player]);
+        return {name:rows[0].name};
     }
 };
 const server=http.createServer(async(req,res)=>{

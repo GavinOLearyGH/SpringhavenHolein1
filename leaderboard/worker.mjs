@@ -1,4 +1,4 @@
-import {boardResponse,distributionQuery,handleLeaderboard,topQuery} from './leaderboard.mjs';
+import {attemptQuery,publishedQuery,boardResponse,distributionQuery,handleLeaderboard,topQuery} from './leaderboard.mjs';
 
 export default {
     async fetch(request,env){
@@ -11,14 +11,21 @@ export default {
                 ]);
                 return boardResponse(day,top.results,distribution.results[0]);
             },
-            async save({day,player,name,ace,mm,posted}){
-                const change=await env.DB.prepare(`
+            async readAttempt(day,player){
+                return env.DB.prepare(attemptQuery).bind(day,player).first();
+            },
+            async recordAttempt({day,player,id,outcome,ace,mm}){
+                await env.DB.prepare(`
+                    INSERT INTO daily_attempts (day, player, id, outcome, ace, mm) VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(day, player) DO NOTHING`).bind(day,player,id,outcome,Number(ace),mm).run();
+                return this.readAttempt(day,player);
+            },
+            async publish({day,player,name,ace,mm,posted}){
+                await env.DB.prepare(`
                     INSERT INTO scores (day, player, name, ace, mm, posted) VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(day, player) DO UPDATE SET
-                    name = excluded.name, ace = excluded.ace, mm = excluded.mm, posted = excluded.posted
-                WHERE excluded.ace > scores.ace OR (excluded.ace = scores.ace AND excluded.mm < scores.mm)`
-                ).bind(day,player,name,Number(ace),mm,posted).run();
-                return change.meta.changes>0;
+                    ON CONFLICT(day, player) DO NOTHING`).bind(day,player,name,Number(ace),mm,posted).run();
+                const result=await env.DB.prepare(publishedQuery).bind(day,player).first();
+                return {name:result.name};
             }
         };
         return handleLeaderboard(request,store);

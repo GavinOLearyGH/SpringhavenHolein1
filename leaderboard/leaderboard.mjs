@@ -32,6 +32,9 @@ export function boardResponse(day,leaders,d){
     return {day,leaders:leaders.map(row=>({...row,ace:Boolean(row.ace),mm:Number(row.mm)})),
         total:Number(d.total),counts:[d.aces,d.inside_three,d.inside_ten,d.inside_twenty_five,d.farther].map(Number)};
 }
+export const attemptQuery='SELECT id, outcome, ace, mm FROM daily_attempts WHERE day = ? AND player = ?';
+export const publishedQuery='SELECT name, ace, mm FROM scores WHERE day = ? AND player = ?';
+function attemptResponse({id,outcome,ace,mm}){return {id,outcome,ace:Boolean(ace),mm};}
 export async function handleLeaderboard(request,store){
     const url=new URL(request.url);
     try{
@@ -42,20 +45,28 @@ export async function handleLeaderboard(request,store){
         if(origin&&origin!==url.origin)return json({error:'Post from the game.'},403);
         if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'Expected JSON.'},415);
         const shot=await readShot(request);
-        const name=typeof shot?.name==='string'?shot.name.trim().replace(/\s+/g,' '):'';
-        if(!name||name.length>28||/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(name)||
-            typeof shot.player!=='string'||!(/^[a-f0-9]{32}$/).test(shot.player)||
-            !Object.hasOwn(clubs,shot.club)||!Number.isFinite(shot.power)||shot.power<.025||shot.power>1||
-            Math.abs(shot.power*2000-Math.round(shot.power*2000))>.000001||
-            !Number.isFinite(shot.heading)||Math.abs(shot.heading)>Math.PI){
-            return json({error:'Invalid shot or display name.'},400);
-        }
+        const validId=value=>typeof value==='string'&&/^[a-f0-9]{32}$/.test(value);
+        if(!validId(shot?.player)||!validId(shot.id))return json({error:'Invalid attempt.'},400);
         if(shot.day!==day)return json({error:'This daily challenge has closed. Play today’s challenge.'},409);
-        const result=replayDailyShot(day,shot.club,shot.power,shot.heading);
-        if(!result)return json({error:'Only shots that finish in play can be posted.'},422);
-        const mm=Math.round(result.distance*1000);
-        const improved=await store.save({day,player:shot.player,name,ace:result.ace,mm,posted:Date.now()});
-        return json({ace:result.ace,mm,improved});
+        if(shot.action==='attempt'){
+            if(!Object.hasOwn(clubs,shot.club)||!Number.isFinite(shot.power)||shot.power<.025||shot.power>1||
+                Math.abs(shot.power*2000-Math.round(shot.power*2000))>.000001||
+                !Number.isFinite(shot.heading)||Math.abs(shot.heading)>Math.PI)return json({error:'Invalid shot.'},400);
+            const result=replayDailyShot(day,shot.club,shot.power,shot.heading);
+            const official=await store.recordAttempt({day,player:shot.player,id:shot.id,...result});
+            return json(attemptResponse(official));
+        }
+        if(shot.action==='publish'){
+            const name=typeof shot.name==='string'?shot.name.trim().replace(/\s+/g,' '):'';
+            if(!name||name.length>28||/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(name))
+                return json({error:'Invalid display name.'},400);
+            const official=await store.readAttempt(day,shot.player);
+            if(!official||official.id!==shot.id)return json({error:'Only your official first shot can be posted.'},409);
+            if(official.outcome!=='in-play')return json({error:'Only shots that finish in play can be posted.'},422);
+            const posted=await store.publish({day,player:shot.player,name,ace:official.ace,mm:official.mm,posted:Date.now()});
+            return json(posted);
+        }
+        return json({error:'Reload the game to post an official first shot.'},400);
     }catch(error){
         console.error('leaderboard',error);
         return json({error:'Shared scoring is temporarily unavailable.'},503);
