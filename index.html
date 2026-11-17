@@ -10,7 +10,7 @@ header{display:flex;justify-content:space-between;align-items:end;gap:1rem;margi
 .club-brand{color:var(--muted);font-size:.78rem;font-weight:650;letter-spacing:.16em}
 h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 .badge{color:var(--gold);font-size:.8rem;white-space:nowrap}
-.stage{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#99c2cc;touch-action:none}
+.stage{--hud-inset:12px;--shot-clearance:86px;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#99c2cc;touch-action:none}
 #course{width:100%;height:clamp(350px,59vh,680px);display:block;cursor:grab}
 #course:active{cursor:grabbing}
 #aim-ring{position:absolute;width:19px;height:19px;border:2px solid #ffe196;border-radius:50%;box-shadow:0 0 0 1px #342819;pointer-events:none;transform:translate(-50%,-50%);opacity:.95}
@@ -24,17 +24,15 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 #flyover-fade{position:absolute;inset:0;background:#121b17;opacity:0;pointer-events:none;z-index:1}
 .stage-hud{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:57%;pointer-events:none}
 .stage-hud>span,.shot-letter{background:#142018ec;padding:.38rem .55rem;border:1px solid #fff3;border-radius:6px;color:#fff;font-size:.82rem}
-.map-card{position:absolute;right:12px;top:54px;height:min(282px,calc(100% - 64px));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
+.map-card{position:absolute;right:12px;top:54px;height:min(282px,calc(100% - 54px - var(--shot-clearance)));aspect-ratio:164/516;background:#18241dee;border:1px solid #fff5;border-radius:9px;overflow:hidden;pointer-events:none}
 #map{display:block;width:100%;height:100%}
-#trace{position:absolute;left:12px;bottom:12px;pointer-events:none}
+#trace{position:absolute;left:var(--hud-inset);bottom:var(--shot-clearance);pointer-events:none}
 .controls{display:flex;align-items:end;gap:.65rem;flex-wrap:wrap;padding:.85rem 0}
 .controls label{display:grid;gap:.25rem;color:var(--muted);font-size:.78rem}
 button,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:.55rem .75rem;min-height:42px}
 button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-visible,select:focus-visible,#course:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-#power-label{overflow-wrap:anywhere}
-#green-grid{position:absolute;left:12px;bottom:12px;min-height:40px;padding:.4rem .6rem;background:#142018ec;color:#fff;font-size:.82rem}
+#green-grid{position:absolute;left:var(--hud-inset);bottom:var(--shot-clearance);min-height:40px;padding:.4rem .6rem;background:#142018ec;color:#fff;font-size:.82rem}
 #green-grid[aria-pressed=true]{color:var(--gold);border-color:#f5d48988}
-#power-wrap{max-width:195px;flex:1 1 130px}progress{width:100%;height:12px;accent-color:var(--gold)}
 #landing-feedback{margin:0;color:var(--muted);font-size:.84rem}
 #status{flex:1;margin:0;min-height:1.5rem;align-self:center}
 .info{display:flex;gap:1rem;justify-content:space-between;flex-wrap:wrap;color:var(--muted);font-size:.85rem;margin:.35rem 0}
@@ -43,21 +41,25 @@ button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-vi
 header{align-items:center}.mode-buttons{display:flex;gap:.35rem}.mode-buttons button[aria-pressed=true],#retry{background:var(--gold);color:#252517;font-weight:750}
 .context{display:flex;gap:.6rem;justify-content:space-between;align-items:center;margin:0 0 .6rem;color:var(--muted);font-size:.84rem}
 #wind-arrow{display:inline-block;font-size:1.2em;line-height:1;margin-right:.24rem}
-#club{width:136px}
 #aim-offset{white-space:nowrap}
-#power-wrap{max-width:none}.shot-controls{display:grid;grid-template-columns:auto minmax(125px,1fr) minmax(155px,.7fr);align-items:end}
-#reset{min-height:48px}.status-row{align-items:center;min-height:44px}.status-row strong{white-space:normal}
+.shot-hud{position:absolute;inset:auto var(--hud-inset) var(--hud-inset);display:flex;align-items:flex-end;justify-content:space-between;gap:.5rem;pointer-events:none}
+.shot-hud label{display:grid;gap:.2rem;padding:.4rem .55rem;background:#142018ec;border:1px solid #fff3;border-radius:8px;color:#fff;font-size:.8rem;line-height:1.25}
+.club-panel{max-width:45%}#club{max-width:100%;width:136px;min-height:36px;padding:.35rem .4rem;pointer-events:auto}
+#power-wrap{width:min(44%,230px)}#power-label{overflow-wrap:anywhere}#power{width:100%;height:10px;accent-color:var(--gold)}
+.shot-help{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin:.6rem 0}
+.shot-help .info{display:grid;gap:.15rem;margin:0}#reset{flex:none}
+.status-row{align-items:center;min-height:44px}.status-row strong{white-space:normal}
 details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:pointer;min-height:32px;padding-top:.35rem}
 .practice-setup{border-top:1px solid var(--line);margin-top:.8rem;padding-top:.75rem}.practice-setup h2{margin:0;font-size:1.1rem}.settings select{max-width:100%}
 @media(max-width:640px){
   main{padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   header{margin-bottom:.55rem;gap:.35rem}.club-brand{font-size:.63rem;letter-spacing:.1em}h1{font-size:1.8rem}
   .mode-buttons button{padding:.35rem .47rem;font-size:.84rem}.context{font-size:.76rem}
+  .stage{--hud-inset:6px;--shot-clearance:82px}
+  .shot-hud label{font-size:.72rem;padding:.3rem .4rem}
+  #club{font-size:1rem;min-height:38px;width:122px}
   #course{height:clamp(260px,48svh,490px)}.stage-hud{left:6px;top:6px;max-width:63%}.stage-hud>span{font-size:.72rem;padding:.3rem .42rem}
-  #flyover{top:6px;right:6px;min-height:42px}.map-card{right:6px;top:53px;height:min(206px,calc(100% - 61px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
-  .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
-  .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#reset{min-width:0;padding:.45rem .65rem;align-self:end}
-  #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1;min-width:62px}
+  #flyover{top:6px;right:6px;min-height:42px}.map-card{right:6px;top:53px;height:min(206px,calc(100% - 53px - var(--shot-clearance)))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
   .status-row{gap:.45rem;font-size:.84rem}#retry{padding:.45rem .55rem}.info{font-size:.78rem}
 }
 
@@ -88,7 +90,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div class="club-brand">THE SPRINGHAVEN CLUB</div>
 <h1 id="welcome-title" tabindex="-1">Today’s Ace</h1>
 <p><strong>Daily Challenge · Hole 6</strong><br><span id="welcome-setup"></span></p>
-<div class="welcome-actions"><button id="open-daily" class="primary">Play the Daily Challenge</button><button id="open-practice">Practise</button></div>
+<div class="welcome-actions"><button id="open-daily" class="primary">Play the Daily Challenge</button><button id="open-practice">Practice</button></div>
 </div>
 <p id="board-source" class="board-source" role="status"></p>
 <div class="welcome-grid">
@@ -100,7 +102,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <table id="rank-table" hidden><thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Best shot</th></tr></thead><tbody id="rank-rows"></tbody></table>
 </section></section>
 <section id="game-screen" hidden aria-label="Play Hole 6">
-<header class="play-header"><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practise</button></div></header>
+<header class="play-header"><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practice</button></div></header>
 <div class="context"><span id="setup-name"></span><span id="daily-best"></span></div>
 <div class="stage" aria-label="First-person view of Hole 6">
 <canvas id="course" tabindex="0" aria-describedby="controls-guide" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
@@ -111,14 +113,16 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <div id="pull-aim" hidden aria-hidden="true"></div><div id="pull-tether" hidden aria-hidden="true"></div><div id="pull-handle" hidden aria-hidden="true"></div>
 <div class="shot-letter" id="trace" hidden>Ball in play</div>
 <button id="green-grid" type="button" aria-pressed="true" title="Moving marks show the local downhill direction." hidden>Green grid</button>
-<div id="flyover-fade" hidden aria-hidden="true"></div>
-</div>
-<div class="controls shot-controls" aria-label="Shot controls">
-<label>Club · carry<select id="club"></select></label>
-<button id="reset" type="button">Reset</button>
+<div class="shot-hud" role="group" aria-label="Shot controls">
+<label class="club-panel">Club · carry<select id="club"></select></label>
 <label id="power-wrap"><span id="power-label" title="Estimated distance from the ball along your aim, using terrain and green speed. If the ball rolls back, the readout shows how far it reaches and where it settles. The estimate treats the cup as part of the green.">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
+<div id="flyover-fade" hidden aria-hidden="true"></div>
+</div>
+<div class="shot-help">
 <div class="info" id="controls-guide"><span>Drag the ball down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
+<button id="reset" type="button">Reset</button>
+</div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <p id="landing-feedback" role="status" hidden></p>
 <section id="daily-result" class="result-panel" hidden aria-labelledby="result-title">
