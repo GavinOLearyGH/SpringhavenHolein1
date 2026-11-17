@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<title>Today’s Ace · Springhaven Hole 6</title>
+<title>The Irish Par Daily Challenge · Hole 6</title>
+<meta name="description" content="Play The Irish Par Daily Challenge. Take on Hole 6, get closest to the pin, or sharpen your game in Practice.">
+<link rel="canonical" href="https://gavinolearygh.github.io/TIPOS_V3.0/daily-challenge/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Irish Par">
+<meta property="og:title" content="The Irish Par Daily Challenge · Hole 6">
+<meta property="og:description" content="One hole. Take your shot and see how close you get.">
+<meta property="og:url" content="https://gavinolearygh.github.io/TIPOS_V3.0/daily-challenge/">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#121b17">
 <style>
 :root{color-scheme:dark;--bg:#121b17;--panel:#1c2821;--line:#3a4a3f;--ink:#eef0e3;--muted:#b6c2b6;--gold:#f5d489}
@@ -93,10 +101,10 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <body><main>
 <section id="welcome" class="welcome" aria-labelledby="welcome-title">
 <div class="welcome-hero">
-<div class="club-brand">THE SPRINGHAVEN CLUB</div>
-<h1 id="welcome-title" tabindex="-1">Today’s Ace</h1>
-<p><strong>Daily Challenge · Hole 6</strong><br><span id="welcome-setup"></span></p>
-<div class="welcome-actions"><button id="open-daily" class="primary">Play the Daily Challenge</button><button id="open-practice">Practice</button></div>
+<div class="club-brand">THE IRISH PAR</div>
+<h1 id="welcome-title" tabindex="-1">Daily Challenge</h1>
+<p><strong>Hole 6 · Closest to the pin</strong><br><span id="welcome-setup"></span></p>
+<div class="welcome-actions"><button id="open-daily" class="primary">Play Daily Challenge</button><button id="open-practice">Practice</button></div>
 </div>
 <p id="board-source" class="board-source" role="status"></p>
 <div class="welcome-grid">
@@ -108,7 +116,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <table id="rank-table" hidden><thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Best shot</th></tr></thead><tbody id="rank-rows"></tbody></table>
 </section></section>
 <section id="game-screen" hidden aria-label="Play Hole 6">
-<header class="play-header"><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practice</button></div></header>
+<header class="play-header"><div><div class="club-brand">THE IRISH PAR</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Daily Challenge</button><button id="practice-mode" aria-pressed="false">Practice</button></div></header>
 <div class="context"><span id="setup-name"></span><span id="daily-best"></span></div>
 <div class="stage" aria-label="First-person view of Hole 6">
 <canvas id="course" tabindex="0" aria-describedby="controls-guide" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
@@ -1868,9 +1876,9 @@ function showDailyResult(result){
     $('score-form').hidden=!result;
     $('result-retry').textContent='Try again';
     $('result-random').hidden=true;
-    $('result-title').textContent=result?(result.ace?'Hole in one!':leave(result.distance)+' to the pin'):
+    $('result-title').textContent=result?(result.ace?'Ace!':leave(result.distance)+' to the pin'):
         ball.mode==='water'?'In the water':'Out of play';
-    $('result-detail').textContent=result?(result.ace?'Today’s Ace':lieNames[surface(ball.x,ball.z)]):
+    $('result-detail').textContent=result?(result.ace?'Daily Challenge · Hole 6':lieNames[surface(ball.x,ball.z)]):
         'Try again to post an in-play shot.';
     $('player-name').value=readBrowser('springhaven-player-name')||'';
     $('post-score').textContent=boardState==='online'&&result?.day===dayKey()?'Post score':'Save score';
