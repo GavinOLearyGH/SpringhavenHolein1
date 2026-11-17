@@ -30,8 +30,7 @@ h1{font:600 clamp(2rem,5vw,3.5rem)/1 Georgia,serif;margin:.32rem 0 0}
 .controls{display:flex;align-items:end;gap:.65rem;flex-wrap:wrap;padding:.85rem 0}
 .controls label{display:grid;gap:.25rem;color:var(--muted);font-size:.78rem}
 button,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:.55rem .75rem;min-height:42px}
-button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-#hit{background:var(--gold);color:#252517;font-weight:750;touch-action:none;min-width:150px}
+button{cursor:pointer}button:disabled{opacity:.48;cursor:default}button:focus-visible,select:focus-visible,#course:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #power-label{overflow-wrap:anywhere}
 #green-grid{position:absolute;left:12px;bottom:12px;min-height:40px;padding:.4rem .6rem;background:#142018ec;color:#fff;font-size:.82rem}
 #green-grid[aria-pressed=true]{color:var(--gold);border-color:#f5d48988}
@@ -45,12 +44,11 @@ header{align-items:center}.mode-buttons{display:flex;gap:.35rem}.mode-buttons bu
 .context{display:flex;gap:.6rem;justify-content:space-between;align-items:center;margin:0 0 .6rem;color:var(--muted);font-size:.84rem}
 #wind-arrow{display:inline-block;font-size:1.2em;line-height:1;margin-right:.24rem}
 #club{width:136px}
-#hit.pulling{background:#ffe9b2;box-shadow:0 0 0 2px #f5d48955}
 #aim-offset{white-space:nowrap}
 #power-wrap{max-width:none}.shot-controls{display:grid;grid-template-columns:auto minmax(125px,1fr) minmax(155px,.7fr);align-items:end}
-#hit{min-height:48px}.status-row{align-items:center;min-height:44px}.status-row strong{white-space:normal}
+#reset{min-height:48px}.status-row{align-items:center;min-height:44px}.status-row strong{white-space:normal}
 details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:pointer;min-height:32px;padding-top:.35rem}
-.fine button{min-width:44px}.settings{border-top:1px solid var(--line);margin-top:.5rem}.settings select{max-width:100%}
+.practice-setup{border-top:1px solid var(--line);margin-top:.8rem;padding-top:.75rem}.practice-setup h2{margin:0;font-size:1.1rem}.settings select{max-width:100%}
 @media(max-width:640px){
   main{padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   header{margin-bottom:.55rem;gap:.35rem}.club-brand{font-size:.63rem;letter-spacing:.1em}h1{font-size:1.8rem}
@@ -58,7 +56,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
   #course{height:clamp(260px,48svh,490px)}.stage-hud{left:6px;top:6px;max-width:63%}.stage-hud>span{font-size:.72rem;padding:.3rem .42rem}
   #flyover{top:6px;right:6px;min-height:42px}.map-card{right:6px;top:53px;height:min(206px,calc(100% - 61px))}.controls{gap:.36rem}.controls button,.controls select{font-size:.88rem}
   .shot-controls{grid-template-columns:minmax(90px,1fr) minmax(120px,1.4fr);padding:.58rem 0;align-items:center}
-  .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#hit{min-width:0;padding:.45rem .25rem;align-self:end}
+  .shot-controls label{font-size:.7rem}#club{width:100%;min-width:0;padding:.45rem .3rem}#reset{min-width:0;padding:.45rem .65rem;align-self:end}
   #power-wrap{grid-column:1/-1;display:flex;align-items:center;gap:.6rem}#power-label{min-width:85px}#power{flex:1;min-width:62px}
   .status-row{gap:.45rem;font-size:.84rem}#retry{padding:.45rem .55rem}.info{font-size:.78rem}
 }
@@ -105,7 +103,7 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <header class="play-header"><div><div class="club-brand">THE SPRINGHAVEN CLUB</div><h1>Hole 6</h1></div><div class="mode-buttons" aria-label="Play mode"><button id="back-home">Welcome</button><button id="daily" aria-pressed="true">Today’s Ace</button><button id="practice-mode" aria-pressed="false">Practise</button></div></header>
 <div class="context"><span id="setup-name"></span><span id="daily-best"></span></div>
 <div class="stage" aria-label="First-person view of Hole 6">
-<canvas id="course" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
+<canvas id="course" tabindex="0" aria-describedby="controls-guide" aria-label="Course view. Pull back from the ball to set aim and power." role="img"></canvas>
 <div class="stage-hud"><span id="distance"></span><span id="lie"></span><span><b id="wind-arrow" aria-hidden="true">↑</b><span id="wind-readout"></span></span><span id="carry" hidden></span><span id="slope" hidden></span><span id="aim-offset" hidden></span></div>
 <button id="flyover" type="button">Flyover</button>
 <div class="map-card"><canvas id="map" width="164" height="516" role="img" aria-label="Overhead view of hole 6, with the green at the top and tee boxes at the bottom. Tracks the ball during the shot."></canvas></div>
@@ -117,9 +115,10 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 </div>
 <div class="controls shot-controls" aria-label="Shot controls">
 <label>Club · carry<select id="club"></select></label>
-<button id="hit" aria-describedby="controls-guide">Pull back to swing</button>
+<button id="reset" type="button">Reset</button>
 <label id="power-wrap"><span id="power-label" title="Estimated distance from the ball along your aim, using terrain and green speed. If the ball rolls back, the readout shows how far it reaches and where it settles. The estimate treats the cup as part of the green.">Power · 0%</span><progress id="power" value="0" max="100"></progress></label>
 </div>
+<div class="info" id="controls-guide"><span>Drag the ball down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
 <div class="status-row"><strong id="score"></strong><p id="status" role="status"></p><button id="retry" hidden>Try again</button></div>
 <p id="landing-feedback" role="status" hidden></p>
 <section id="daily-result" class="result-panel" hidden aria-labelledby="result-title">
@@ -131,21 +130,19 @@ details{font-size:.83rem;color:var(--muted);margin:.65rem 0}summary{cursor:point
 <p id="post-status" class="subtle" role="status"></p>
 <div class="welcome-actions"><button id="result-retry">Try again</button><button id="result-home">Back to welcome</button></div>
 </section>
-<details id="fine"><summary>Fine aim and power</summary><div class="controls fine">
-<button id="fine-left" aria-label="Nudge aim left">←</button><button id="fine-right" aria-label="Nudge aim right">→</button>
-<button id="power-down" aria-label="Decrease preset power">−</button><button id="power-up" aria-label="Increase preset power">+</button>
-<button id="hit-preset">Hit set shot</button>
-</div></details>
-<div id="practice-settings" class="controls settings" aria-label="Practice settings" hidden>
+<section id="practice-settings" class="practice-setup" aria-labelledby="practice-setup-title" hidden>
+<h2 id="practice-setup-title">Set up your shot</h2>
+<div class="controls settings">
 <label>Tee<select id="tee"><option value="back">Back</option><option value="middle" selected>Middle</option><option value="forward">Forward</option></select></label>
 <label>Wind direction<select id="wind"></select></label>
 <label>Wind speed<select id="wind-speed"><option value="0">Calm</option><option value="5">5 mph</option><option value="8">8 mph</option><option value="12">12 mph</option></select></label>
 <label>Practice pin<select id="pin"></select></label>
 <label>Green speed<select id="green-speed"><option value="0.8">Slow</option><option value="1" selected>Medium</option><option value="1.24">Fast</option></select></label>
 <label>Start from<select id="practice"><option value="tee">Tee</option><option value="bank">Pond approach</option><option value="wedge">Fairway wedge</option><option value="bunker">Bunker</option><option value="sidehill">Sidehill putt</option><option value="ridge">Across the ridge</option><option value="short">Short putt</option></select></label>
-<button id="reset">Reset</button>
+<button id="random-position" type="button">Random position</button>
 </div>
-<div class="info" id="controls-guide"><span>Pull down for power. Slide left to aim right, or right to aim left. Release to swing.</span><span>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</span></div>
+</section>
+
 <div class="info">Tee markers are based on scorecard yardages. The two-tier green and pin locations are provisional.</div>
 </section></main><script>
 const scale = 0.153;
@@ -1123,7 +1120,7 @@ addOptions('club',bag.map(name=>[name,clubs[name].carry?name+' · '+clubs[name].
 addOptions('wind',windDirections.map((name,index)=>[index,name]));
 addOptions('pin',Object.keys(pins).map(key=>[key,pinNames[key]]));
 $('pin').value='middle';
-let daily=true,currentDay='',challenge,stats,finished=false,presetPower=1,presetActive=false,previousClub=null,previousAim=null;
+let daily=true,currentDay='',challenge,stats,finished=false,previousClub=null,previousAim=null;
 const quantize=(value,step)=>Math.round(value/step)*step;
 function applyMode(){
     if(daily){
@@ -1137,7 +1134,7 @@ function applyMode(){
 }
 function setMode(isDaily){
     if(daily===isDaily||active()||flyover)return;
-    daily=isDaily;previousClub=null;previousAim=null;presetPower=1;
+    daily=isDaily;previousClub=null;previousAim=null;
     reset();
 }
 let heading=0,ball,strokeFrom,shotHeading,stroke=0,penalties=0,trail=[],charge=0,drag=null,keyTime=null;
@@ -1147,10 +1144,10 @@ const active=()=>['air','roll','drop'].includes(ball.mode);
 const editable=()=>!$('game-screen').hidden&&ball.mode==='rest'&&!finished&&!flyover;
 const flatDistance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const angleTo=(a,b)=>Math.atan2(b.z-a.z,b.x-a.x);
-function practicePoint(){
+function practicePoint(position=$('practice').value){
     if(daily)return settings.tee;
     const pin=settings.pin;
-    switch($('practice').value){
+    switch(position){
         case 'bank':return {x:981*scale,z:pin.z};
         case 'ridge':return {x:1175*scale,z:242*scale};
         case 'sidehill':return {x:pins.middle.x-3.3,z:pins.middle.z-2.4};
@@ -1190,7 +1187,7 @@ function reset(){
     hideDailyResult();
     mapTrail=[];waterMark=null;
     $('landing-feedback').hidden=true;
-    finished=false;presetActive=false;stroke=0;penalties=0;trail=[];drag=null;keyTime=null;eye=null;target=null;
+    finished=false;stroke=0;penalties=0;trail=[];drag=null;keyTime=null;eye=null;target=null;
     ball=newBall(practicePoint(),ground);
     heading=angleTo(ball,settings.pin);
     const carry=flatDistance(ball,settings.pin)/.9144-4;
@@ -1200,8 +1197,8 @@ function reset(){
         lie==='green'?'Putter':lie==='sand'||!daily&&$('practice').value==='bank'?'SW':
         !daily&&$('practice').value==='wedge'?'LW':suggested;
     if(daily&&previousAim!==null)heading=previousAim;
-    setPower($('fine').open?presetPower:0);
-    status.textContent=renderer?'Pull back to set your shot.':renderError;
+    setPower(0);
+    status.textContent=renderer?'Ready.':renderError;
     updateHUD();
 }
 function showWind(){
@@ -1235,7 +1232,6 @@ function updateHUD(){
     $('aim-offset').hidden=!editable();
     $('aim-offset').textContent=Math.abs(offset)<.007?'On pin':Math.abs(offset).toFixed(2)+'° '+(offset>0?'right':'left')+' of pin';
     const pulling=drag?.kind==='shot';
-    $('hit').classList.toggle('pulling',pulling);
     ballMarker.classList.toggle('grabbed',pulling);
     if(!pulling)pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;
     $('carry').hidden=!Number.isFinite(carry);
@@ -1264,8 +1260,8 @@ function updateHUD(){
     $('practice-mode').setAttribute('aria-pressed',String(!daily));
     $('daily').disabled=$('practice-mode').disabled=active()||!!flyover;
     $('practice-settings').hidden=daily;
-    for(const name of ['club','hit','fine-left','fine-right','power-down','power-up','hit-preset'])$(name).disabled=!editable()||!renderer;
-    for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset'])$(name).disabled=active()||!!flyover;
+    $('club').disabled=!editable()||!renderer;
+    for(const name of ['pin','wind','wind-speed','green-speed','tee','practice','reset','random-position'])$(name).disabled=active()||!!flyover;
     if(!active())drawMap();
 }
 function mapPoint(point){
@@ -1333,7 +1329,7 @@ function shoot(){
         previousClub=$('club').value;previousAim=heading;
         pendingShot={day:currentDay,club:previousClub,power:charge,heading:Math.atan2(Math.sin(heading),Math.cos(heading))};
     }
-    presetPower=charge;trail=[];trailTime=0;shotStarted=0;
+    trail=[];trailTime=0;shotStarted=0;
     mapTrail=[];waterMark=null;
     $('landing-feedback').hidden=true;
     ball=strike(ball,ground,$('club').value,charge,heading,surface(ball.x,ball.z));
@@ -1362,10 +1358,10 @@ function beginDrag(event,kind){
 }
 canvas.addEventListener('pointerdown',event=>{
     const p=renderer?.project(ball.x,ball.y+.022,ball.z),rect=canvas.getBoundingClientRect();
-    const onBall=p&&Math.hypot(p.x+rect.x-event.clientX,p.y+rect.y-event.clientY)<42;
+    const grabRadius=event.pointerType==='touch'?48:42;
+    const onBall=p&&Math.hypot(p.x+rect.x-event.clientX,p.y+rect.y-event.clientY)<grabRadius;
     beginDrag(event,onBall?'shot':'aim');
 });
-$('hit').addEventListener('pointerdown',event=>beginDrag(event,'shot'));
 function cancel(){
     if(drag){
         const {aim,charge:priorPower}=drag;
@@ -1397,32 +1393,29 @@ function previewDrag(event){
     const base=angleTo(ball,settings.pin);
     heading=base+quantize(drag.aim-base+turn,aimStep);
 }
-for(const element of [canvas,$('hit')]){
-    element.addEventListener('pointermove',event=>{
-        if(drag?.id!==event.pointerId)return;
-        previewDrag(event);
+canvas.addEventListener('pointermove',event=>{
+    if(drag?.id!==event.pointerId)return;
+    previewDrag(event);
+    updateHUD();
+});
+canvas.addEventListener('pointerup',event=>{
+    if(drag?.id!==event.pointerId)return;
+    previewDrag(event);
+    if(drag.kind==='shot'){
+        if(event.clientY-drag.y<8){cancel();return;}
+        drag=null;
+        shoot();
+    }else{
+        drag=null;
         updateHUD();
-    });
-    element.addEventListener('pointerup',event=>{
-        if(drag?.id!==event.pointerId)return;
-        previewDrag(event);
-        if(drag.kind==='shot'){
-            if(event.clientY-drag.y<8){cancel();return;}
-            drag=null;
-            presetActive=false;
-            shoot();
-        }else{
-            drag=null;
-            updateHUD();
-        }
-    });
-    element.addEventListener('pointercancel',event=>{if(drag?.id===event.pointerId)cancel();});
-    element.addEventListener('lostpointercapture',event=>{if(drag?.id===event.pointerId)cancel();});
-}
+    }
+});
+canvas.addEventListener('pointercancel',event=>{if(drag?.id===event.pointerId)cancel();});
+canvas.addEventListener('lostpointercapture',event=>{if(drag?.id===event.pointerId)cancel();});
 const aimIncrement=()=>$('club').value==='Putter'?.007:.005;
 window.addEventListener('keydown',event=>{
     if(event.code==='Escape'){if(flyover)stopFlyover();else cancel();return;}
-    if(event.target.matches?.('input,select,button') && !(event.target===$('hit')&&event.code==='Space'))return;
+    if(event.target.matches?.('input,select,button'))return;
     if(!editable())return;
     if(event.code==='ArrowLeft'||event.code==='ArrowRight'){
         event.preventDefault();if(!drag)aimBy(aimIncrement()*(event.code==='ArrowLeft'?-1:1));
@@ -1445,19 +1438,26 @@ gridButton.onclick=()=>{
     showGreenGrid=!showGreenGrid;
     updateHUD();
 };
-$('reset').onclick=$('retry').onclick=reset;
+function resetAndFocus(){
+    reset();
+    canvas.focus({preventScroll:true});
+}
+function randomPracticePosition(){
+    if(daily||active()||flyover)return;
+    const select=$('practice');
+    const choices=[...select.options].filter(option=>{
+        if(option.value===select.value)return false;
+        const point=practicePoint(option.value);
+        return surface(point.x,point.z)!=='water';
+    });
+    if(!choices.length)return;
+    select.value=choices[Math.floor(Math.random()*choices.length)].value;
+    resetAndFocus();
+}
+$('reset').onclick=$('retry').onclick=resetAndFocus;
+$('random-position').onclick=randomPracticePosition;
 $('daily').onclick=()=>setMode(true);
 $('practice-mode').onclick=()=>setMode(false);
-$('fine-left').onclick=()=>aimBy(-aimStep);
-$('fine-right').onclick=()=>aimBy(aimStep);
-$('fine').ontoggle=()=>{if($('fine').open&&editable()&&!drag)setPower(presetPower);};
-function adjustPower(amount){
-    if(!presetActive){setPower(presetPower);presetActive=true;}
-    setPower(charge+amount);
-}
-$('power-down').onclick=()=>adjustPower(-powerStep);
-$('power-up').onclick=()=>adjustPower(powerStep);
-$('hit-preset').onclick=()=>{if(charge<.025&&!presetActive)setPower(presetPower);shoot();};
 
 function leave(distance){
     if(distance>=18.288)return yards(distance)+' yd';
@@ -1747,7 +1747,7 @@ function openGame(wantsDaily){
         try{renderer=makeRenderer(canvas,map);}catch(error){renderError=error.message;}
     }
     $('welcome').hidden=true;$('game-screen').hidden=false;
-    daily=wantsDaily;previousClub=null;previousAim=null;presetPower=1;
+    daily=wantsDaily;previousClub=null;previousAim=null;
     reset();$('back-home').focus();
 }
 function backToWelcome(){
@@ -1814,7 +1814,7 @@ async function submitResult(event){
 $('open-daily').onclick=()=>openGame(true);
 $('open-practice').onclick=()=>openGame(false);
 $('back-home').onclick=$('result-home').onclick=backToWelcome;
-$('result-retry').onclick=()=>{reset();$('hit').focus();};
+$('result-retry').onclick=resetAndFocus;
 $('score-form').onsubmit=submitResult;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('welcome').hidden)refreshWelcome();});
 setInterval(()=>{if(!$('welcome').hidden&&boardDate!==dayKey())refreshWelcome();},15000);
