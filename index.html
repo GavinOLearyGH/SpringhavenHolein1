@@ -841,12 +841,13 @@ function makeRenderer(canvas,map){
             if(kind>0.5){
                 vec3 sampleColor=texture2D(atlas,vec2(world.x/(1400.*${scale}),world.z/(500.*${scale}))).rgb;
                 bool pond=sampleColor.b>sampleColor.g+.035 && sampleColor.b>sampleColor.r+.12;
-                if(kind>1.5){
-                    if(!pond)discard;
+                if(kind>1.5&&kind<3.5){
+                    if(kind<2.5&&!pond)discard;
                     float ripple=sin(world.x*5.4+sin(world.z*3.6))*sin(world.z*5.4)*.035;
                     outColor=vec3(.22,.45,.53)+ripple;
                 }else{
-                    if(pond)discard;
+                    if(kind<1.5&&pond)discard;
+                    if(pond)sampleColor=vec3(.36,.49,.30);
                     float grain=fract(sin(dot(floor(world.xz*42.),vec2(12.9898,78.233)))*43758.5453)*.055;
                     outColor=sampleColor*color*(.95+grain);
                 }
@@ -906,18 +907,82 @@ function makeRenderer(canvas,map){
         gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.STATIC_DRAW);
         return {handle,count:mesh.length/6};
     }
-    const mesh=[], lake=[], solid=[];
+    const mesh=[], lake=[], solid=[], bank=[], shoreline=[];
     const unit=scale*4,nx=350,nz=125,heights=[];
     for(let i=0;i<=nx;i++){
         heights[i]=[];
         for(let j=0;j<=nz;j++)heights[i][j]=ground(i*unit,j*unit);
     }
     const point=(i,j)=>[i*unit,heights[i][j],j*unit];
+    const grassEdge=wall.map(p=>[p.x+p.nx*.82,0,p.z+p.nz*.82]);
+    const wetEdge=wall.map(p=>[p.x-p.nx*.62,waterHeight,p.z-p.nz*.62]);
+    const edgeSide=(a,b,p)=>(b[0]-a[0])*(p[2]-a[2])-(b[2]-a[2])*(p[0]-a[0]);
+    const interpolate=(a,b,t)=>a.map((value,i)=>mix(value,b[i],t));
+    const cutCells=new Map();
+    for(let i=1;i<wall.length;i++){
+        const cut=[wetEdge[i-1],wetEdge[i],grassEdge[i],grassEdge[i-1]];
+        if(edgeSide(cut[0],cut[1],cut[2])<0)cut.reverse();
+        const bounds=axis=>cut.map(p=>Math.floor(p[axis]/unit));
+        const xs=bounds(0),zs=bounds(2);
+        for(let x=Math.min(...xs);x<=Math.max(...xs);x++)for(let z=Math.min(...zs);z<=Math.max(...zs);z++){
+            const key=x*nz+z;
+            if(!cutCells.has(key))cutCells.set(key,[]);
+            cutCells.get(key).push(cut);
+        }
+    }
+    // Split a triangle against the narrow strip around each wall segment.
+    // Keep its outside pieces, with heights interpolated along the cut edges.
+    function outsideCut(polygon,cut){
+        const outside=[];
+        for(let i=0;polygon.length>=3&&i<cut.length;i++){
+            const a=cut[i],b=cut[(i+1)%cut.length],inside=[],piece=[];
+            let p=polygon.at(-1),distance=edgeSide(a,b,p);
+            for(const q of polygon){
+                const next=edgeSide(a,b,q);
+                if((distance>=0)!==(next>=0)){
+                    const joint=interpolate(p,q,distance/(distance-next));
+                    inside.push(joint);piece.push(joint);
+                }
+                (next>=0?inside:piece).push(q);
+                p=q;distance=next;
+            }
+            if(piece.length>=3)outside.push(piece);
+            polygon=inside;
+        }
+        return outside;
+    }
+    function gridHeight(x,z){
+        const i=Math.floor(x/unit),j=Math.floor(z/unit),u=x/unit-i,v=z/unit-j;
+        const a=heights[i][j],b=heights[i+1][j],c=heights[i+1][j+1],d=heights[i][j+1];
+        return u>=v?a+(b-a)*u+(c-b)*v:a+(c-d)*u+(d-a)*v;
+    }
+    // Include each grid edge and diagonal along the grass seam so both meshes
+    // have the same straight edges and heights at their join.
+    function gridCuts(a,b){
+        const cuts=[0,1];
+        for(const [start,end] of [[a[0],b[0]],[a[2],b[2]],[a[0]-a[2],b[0]-b[2]]]){
+            for(let grid=Math.floor(Math.min(start,end)/unit)+1;grid*unit<Math.max(start,end);grid++){
+                const t=(grid*unit-start)/(end-start);
+                if(t>1e-7&&t<1-1e-7)cuts.push(t);
+            }
+        }
+        return cuts.sort((a,b)=>a-b);
+    }
     for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){
         const front=heights[i][j]+heights[i][j+1],back=heights[i+1][j]+heights[i+1][j+1];
         const left=heights[i][j]+heights[i+1][j],right=heights[i][j+1]+heights[i+1][j+1];
         const light=clamp(1-(.85*(back-front)+.45*(right-left))/(2*unit),.74,1.12);
-        quad(mesh,point(i,j),point(i+1,j),point(i+1,j+1),point(i,j+1),[light,light,light]);
+        const corners=[point(i,j),point(i+1,j),point(i+1,j+1),point(i,j+1)];
+        const shade=[light,light,light],cuts=cutCells.get(i*nz+j);
+        if(!cuts){
+            quad(mesh,...corners,shade);
+            continue;
+        }
+        let pieces=[[corners[0],corners[1],corners[2]],[corners[0],corners[2],corners[3]]];
+        for(const cut of cuts)pieces=pieces.flatMap(piece=>outsideCut(piece,cut));
+        for(const piece of pieces)for(let k=1;k<piece.length-1;k++){
+            triangle(mesh,piece[0],piece[k],piece[k+1],shade);
+        }
     }
     quad(lake,[0,waterHeight,0],[courseWidth,waterHeight,0],[courseWidth,waterHeight,courseDepth],[0,waterHeight,courseDepth],white);
     for(let i=1;i<wall.length;i++){
@@ -930,15 +995,20 @@ function makeRenderer(canvas,map){
                 [b.x,waterHeight+(j+1)*(b.top-waterHeight)/5,b.z],[a.x,top,a.z],[c+.055,c+.025,c]);
         }
     }
-    // Anchor the narrow edge of the grass to the stone between terrain grid points.
-    const turfEdge=(p,d)=>{
-        const x=p.x+p.nx*d,z=p.z+p.nz*d;
-        return [x,d===0?p.top:Math.max(waterHeight,ground(x,z))+.008,z];
-    };
     for(let i=1;i<wall.length;i++){
-        const a=wall[i-1],b=wall[i];
-        quad(mesh,turfEdge(a,0),turfEdge(b,0),turfEdge(b,.42),turfEdge(a,.42),[.97,.97,.97]);
-        quad(mesh,turfEdge(a,.42),turfEdge(b,.42),turfEdge(b,.82),turfEdge(a,.82),[.97,.97,.97]);
+        const a=wall[i-1],b=wall[i],start=grassEdge[i-1],end=grassEdge[i];
+        const cuts=gridCuts(start,end);
+        const crest=t=>[mix(a.x,b.x,t),mix(a.top,b.top,t),mix(a.z,b.z,t)];
+        const grass=t=>{
+            const p=interpolate(start,end,t);
+            p[1]=gridHeight(p[0],p[2]);
+            return p;
+        };
+        for(let j=1;j<cuts.length;j++){
+            const from=cuts[j-1],to=cuts[j];
+            quad(bank,crest(from),crest(to),grass(to),grass(from),[.97,.97,.97]);
+        }
+        quad(shoreline,[a.x,waterHeight,a.z],[b.x,waterHeight,b.z],wetEdge[i],wetEdge[i-1],white);
     }
     const bridgeStone=[.68,.66,.61],bridgeEdge=[.78,.76,.70];
     const deckPoint=(t,w,dy)=>{
@@ -977,6 +1047,7 @@ function makeRenderer(canvas,map){
         ellipsoid(solid,x+.75,y+h*.58,z+.55,h*.22,h*.25,h*.25,[.27,.43,.24],8,4);
     }
     const groundBuffer=buffer(mesh),waterBuffer=buffer(lake),solidBuffer=buffer(solid);
+    const bankBuffer=buffer(bank),shorelineBuffer=buffer(shoreline);
     const mobile=gl.createBuffer();
     function draw(item,kind){
         gl.bindBuffer(gl.ARRAY_BUFFER,item.handle);
@@ -1047,7 +1118,7 @@ function makeRenderer(canvas,map){
         gl.uniform1f(uniform.ratio,camera.ratio);
         gl.clearColor(.58,.76,.83,1);
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-        draw(groundBuffer,1);draw(waterBuffer,2);draw(solidBuffer,0);
+        draw(groundBuffer,1);draw(bankBuffer,4);draw(waterBuffer,2);draw(shorelineBuffer,3);draw(solidBuffer,0);
         const moving=[],base=ground(pin.x,pin.z);
         if(gridTick!==null){
             puttingGrid??=makePuttingGrid();
