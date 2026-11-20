@@ -15,6 +15,11 @@
 <span id="tour-label" hidden>Green read · Downhill direction</span><div id="fade" hidden></div>
 </div>
 <div class="under-game"><p id="instructions">Drag the ball down for power. Slide left to aim right, or right to aim left. Release to swing.<br>Keyboard: ← → aim · Hold Space for power · Release to hit · Esc cancels</p><button id="reset" type="button">Reset hole</button></div>
+<section class="shot-summary" id="shot-summary" aria-labelledby="shot-summary-title" hidden>
+<div class="shot-summary-heading"><strong id="shot-summary-title">Last shot</strong><span id="shot-summary-detail"></span></div>
+<dl><div><dt>Carry</dt><dd id="shot-carry"></dd></div><div><dt>Bounce + roll</dt><dd id="shot-roll"></dd></div><div><dt>Total travel</dt><dd id="shot-total"></dd></div></dl>
+<p>Horizontal travel before and after first contact, including later bounces and rollback.</p></section>
+<p class="build-line"><span id="build-version"></span><span id="update-notice" hidden>New build available. <button type="button" id="reload-build">Load update</button></span></p>
 <p id="status" role="status">Preparing the course…</p>
 <details><summary>Set up your round</summary><div class="setup settings">
 <label>Tee<select id="tee"></select></label>

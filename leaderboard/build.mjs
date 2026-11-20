@@ -1,4 +1,5 @@
-import {cp,mkdir,readFile,writeFile} from 'node:fs/promises';
+import {buildCourseAssets} from '../course/build.mjs';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 
 const source=new URL('../index.html',import.meta.url);
 const assets=new URL('./generated/public/',import.meta.url);
@@ -26,8 +27,8 @@ if(start<0||end<=start)throw Error('Could not locate the shared physics in index
 await mkdir(assets,{recursive:true});
 await Promise.all([
     writeFile(new URL('index.html',assets),html),
-    cp(new URL('../course',import.meta.url),new URL('course/',assets),{recursive:true}),
-    cp(new URL('../core',import.meta.url),new URL('core/',assets),{recursive:true}),
     writeFile(new URL('./generated/physics.mjs',import.meta.url),
         html.slice(start,end)+'\nexport { dayKey, clubs, replayDailyShot };\n')
 ]);
+
+console.log('Course build: '+await buildCourseAssets(assets));
