@@ -23,7 +23,8 @@ const surfaces = {
     surround:{bounce:.23,brake:.78,forward:.7304,entry:.94},
     green:{bounce:.30,brake:.36,forward:.434,entry:1},
     sand:{bounce:.025,brake:2.75,forward:.15,entry:.63},
-    bridge:{bounce:.46,brake:.6,forward:.8408,entry:1}
+    bridge:{bounce:.46,brake:.6,forward:.8408,entry:1},
+    path:{bounce:.5,brake:.55,forward:.86,entry:1}
 };
 const windDirections=['Toward green','Toward green and right','Left to right','Toward tee and right','Toward tee','Toward tee and left','Right to left','Toward green and left'];
 const mphToMetresPerSecond=.44704;
@@ -248,6 +249,28 @@ function resolveFastPutt(ball,from,pin,speed){
         ball.cupCooldown=.32;
     }
 }
+function obstacleContact(ball,from,obstacle){
+    const {center,radii}=obstacle;
+    const p=[(from.x-center.x)/radii.x,(from.y-center.y)/radii.y,(from.z-center.z)/radii.z];
+    const d=[(ball.x-from.x)/radii.x,(ball.y-from.y)/radii.y,(ball.z-from.z)/radii.z];
+    const a=d.reduce((sum,n)=>sum+n*n,0),b=2*d.reduce((sum,n,i)=>sum+n*p[i],0);
+    const c=p.reduce((sum,n)=>sum+n*n,0)-1,disc=b*b-4*a*c;
+    if(a<1e-12||disc<0||c<0)return;
+    const t=(-b-Math.sqrt(disc))/(2*a);
+    if(t<0||t>1)return;
+    const x=mix(from.x,ball.x,t),y=mix(from.y,ball.y,t),z=mix(from.z,ball.z,t);
+    let nx=(x-center.x)/radii.x**2,ny=(y-center.y)/radii.y**2,nz=(z-center.z)/radii.z**2;
+    const length=Math.hypot(nx,ny,nz);
+    nx/=length;ny/=length;nz/=length;
+    const velocity=ball.vx*nx+ball.vy*ny+ball.vz*nz;
+    if(velocity>=0)return;
+    const rebound=1+(obstacle.restitution??.2),drag=obstacle.retention??.55;
+    ball.vx=(ball.vx-rebound*velocity*nx)*drag;
+    ball.vy=(ball.vy-rebound*velocity*ny)*drag;
+    ball.vz=(ball.vz-rebound*velocity*nz)*drag;
+    ball.x=x+nx*.025;ball.y=y+ny*.025;ball.z=z+nz*.025;
+    ball.obstacle=obstacle.kind;
+}
 function advance(ball, course, settings, dt=stepTime){
     ball.time+=dt;
     const {ground,surface,wall=[],waterHeight=-Infinity,bridgeHeight,terrainGround,terrainSurface}=course;
@@ -289,6 +312,7 @@ function advance(ball, course, settings, dt=stepTime){
     }
     ball.y=ball.mode==='air'?ball.y+ball.vy*dt:rollingGround(ball.x,ball.z)+ballRadius;
 
+    for(const obstacle of course.obstacles??[])obstacleContact(ball,from,obstacle);
     const wallArea=course.wallBounds;
     if(wall.length>1&&(!wallArea||Math.min(from.y,ball.y)<wallArea.top&&
         Math.max(from.x,ball.x)>=wallArea.minX&&Math.min(from.x,ball.x)<=wallArea.maxX&&

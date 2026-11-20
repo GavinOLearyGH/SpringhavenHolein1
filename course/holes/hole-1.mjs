@@ -8,7 +8,15 @@ export const hole1={
     id:'springhaven-1',number:1,name:'The Springhaven Club - Hole 1',par:4,
     plan:{width:1696,height:983,metresPerUnit:k},
     bounds:{minX:120*k,maxX:1630*k,minZ:350*k,maxZ:670*k},
-    airClearance:4,
+    airClearance:16,renderStep:1.05,pathWidth:1.8,
+    scenery:{
+        trees:[
+            [335,585,9],[440,578,10],[545,590,9],[650,610,11],[887,593,10],[1040,605,10],[1180,613,11],[1330,625,9],[1565,593,9],
+            [450,358,9],[585,363,8],[715,365,10],[830,370,9],[945,373,9],[1080,390,11],[1210,390,10],[1360,390,11],[1545,394,9],[1610,470,11],[1605,570,10]
+        ].map(([x,z,height])=>({x:x*k,z:z*k,height})),
+        buildings:[{x:218*k,z:413*k,width:31,height:7,depth:17}]
+    },
+    boundaryStakes:Array.from({length:22},(_,i)=>({x:(315+i*60)*k,z:(350+Math.max(0,i-7)*2.4)*k})),
     tees:[
         tee('1896','1896 (Black)',419,492),
         tee('rawlins','Rawlins (Blue)',401,490),

@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {hole1} from '../course/holes/hole-1.mjs';
 import {createCourse} from '../core/course.mjs';
 import {createRound,fullBag} from '../core/round.mjs';
-import {clubs,windVector} from '../core/physics.mjs';
+import {clubs,windVector,advance} from '../core/physics.mjs';
 const html=readFileSync('index.html','utf8');
 const original=execFileSync('git',['show','9a40a9f5660965a076fb4cfa695fa7d48ef4eee9:index.html'],{encoding:'utf8'});
 function physics(source){
@@ -45,3 +45,14 @@ assert.equal(bad.state.penalties,1);
 assert.equal(bad.state.strokes,2);
 assert.equal(bad.state.ball.x,course.tees[0].x);
 console.log('180 Hole 6 replay comparisons passed. Four tee distances, driver, 14-club bag, multi-shot round, cup capture and OB penalty passed.');
+
+// Closed paths can contain repeated endpoints. Sand must still have finite depths.
+const unit=hole1.plan.metresPerUnit;
+for(let x=965;x<=1025;x+=3)for(let z=370;z<=433;z+=3)assert.ok(Number.isFinite(course.ground(x*unit,z*unit)));
+const flat={ground:()=>0,surface:()=> 'rough',wall:[],bounds:{minX:-20,maxX:20,minZ:-20,maxZ:20},
+    obstacles:[{kind:'tree',center:{x:1,y:2,z:0},radii:{x:.3,y:1,z:.3},restitution:.2,retention:.5}]};
+const hit={x:.5,y:2,z:0,vx:20,vy:0,vz:0,mode:'air',lift:0,time:0,cupCooldown:0};
+advance(hit,flat,{pin:{x:10,z:10},wind:{x:0,z:0},greenSpeed:1},.03);
+assert.equal(hit.obstacle,'tree');
+assert.ok(hit.vx<0);
+console.log('Bunker endpoint regression and shared obstacle collision passed.');

@@ -17,7 +17,19 @@ export function createCourse(definition){
         }
         return pz<definition.bounds.minZ/unit;
     }
+    const pathLines=(definition.paths??[]).flatMap(path=>geometryPath(path));
+    function distanceToLines(lines,px,pz){
+        let closest=Infinity;
+        for(const points of lines)for(let i=1;i<points.length;i++){
+            const a=points[i-1],b=points[i],dx=b[0]-a[0],dz=b[1]-a[1];
+            const lengthSquared=dx*dx+dz*dz;
+            const t=lengthSquared?clamp(((px-a[0])*dx+(pz-a[1])*dz)/lengthSquared,0,1):0;
+            closest=Math.min(closest,Math.hypot(px-a[0]-dx*t,pz-a[1]-dz*t)*unit);
+        }
+        return closest;
+    }
     function surface(x,z){
+        if(definition.pathWidth&&distanceToLines(pathLines,x/unit,z/unit)<definition.pathWidth/2)return 'path';
         for(const kind of ['sand','green','tee','surround','fairway']){
             if(contains(kind,x,z))return kind;
         }
@@ -36,16 +48,19 @@ export function createCourse(definition){
             y+=pews.height*Math.exp(-(((px-pews.x-i*pews.spacing)/pews.width)**2))*ends;
         }
         if(surface(x,z)==='sand'){
-            const boundary=paths.sand;
-            let edge=Infinity;
-            for(const points of boundary)for(let i=1;i<points.length;i++){
-                const a=points[i-1],b=points[i],dx=b[0]-a[0],dz=b[1]-a[1];
-                const t=clamp(((px-a[0])*dx+(pz-a[1])*dz)/(dx*dx+dz*dz),0,1);
-                edge=Math.min(edge,Math.hypot(px-a[0]-dx*t,pz-a[1]-dz*t)*unit);
-            }
+            const edge=distanceToLines(paths.sand,px,pz);
             y-=terrain.bunkerDepth*ease(edge/terrain.bunkerBlend);
         }
         return y;
     }
-    return {...definition,ground,surface,isOutOfBounds,wall:[],waterHeight:-Infinity};
+    const obstacles=(definition.scenery?.trees??[]).flatMap(tree=>{
+        const base=ground(tree.x,tree.z),h=tree.height;
+        return [
+            {kind:'tree trunk',center:{x:tree.x,y:base+h*.275,z:tree.z},
+                radii:{x:.25,y:h*.275,z:.25},restitution:.35,retention:.65},
+            {kind:'tree canopy',center:{x:tree.x,y:base+h*.69,z:tree.z},
+                radii:{x:h*.28,y:h*.4,z:h*.26},restitution:.05,retention:.48}
+        ];
+    });
+    return {...definition,ground,surface,isOutOfBounds,obstacles,wall:[],waterHeight:-Infinity};
 }
