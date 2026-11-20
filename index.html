@@ -234,12 +234,13 @@ const clubs = {
 const bag=Object.keys(clubs);
 const surfaces = {
     tee:{bounce:.32,brake:.46,forward:.7736,entry:1},
-    fairway:{bounce:.39,brake:.53,forward:.8072,entry:1},
-    rough:{bounce:.14,brake:1.75,forward:.56,entry:.84},
+    fairway:{bounce:.14,brake:1.2,forward:.60,entry:1},
+    rough:{bounce:.075,brake:2.8,forward:.42,entry:.74},
     surround:{bounce:.23,brake:.78,forward:.7304,entry:.94},
     green:{bounce:.30,brake:.36,forward:.434,entry:1},
     sand:{bounce:.025,brake:2.75,forward:.15,entry:.63},
-    bridge:{bounce:.46,brake:.6,forward:.8408,entry:1}
+    bridge:{bounce:.46,brake:.6,forward:.8408,entry:1},
+    path:{bounce:.5,brake:.55,forward:.86,entry:1}
 };
 const windDirections=['Toward green','Toward green and right','Left to right','Toward tee and right','Toward tee','Toward tee and left','Right to left','Toward green and left'];
 const mphToMetresPerSecond=.44704;
@@ -305,7 +306,7 @@ function strike(point,ground,club,power,heading,lie){
     const spin=putt?0:(.44+.018*config.loft)*(.45+.55*power**.8)*(fromRough?.52:fromSand?.63:1);
     return {...newBall(point,ground),vx:Math.cos(heading)*speed*Math.cos(loft)*penalty,
         vy:Math.sin(loft)*speed*penalty,vz:Math.sin(heading)*speed*Math.cos(loft)*penalty,
-        putted:putt,lift:(config.lift||0)*(.55+.45*power),spin,roll:config.roll*(!putt&&fromRough?1.19:1),mode:putt?'roll':'air'};
+        putted:putt,lift:(config.lift||0)*(.55+.45*power),spin,roll:config.roll,mode:putt?'roll':'air'};
 }
 function flagContact(from,to,pin){
     const dx=to.x-from.x,dz=to.z-from.z;
@@ -346,19 +347,19 @@ function crossing(a,b,c,d){
     return t>0&&t<=1&&u>=0&&u<=1?t:null;
 }
 
-function surroundGrade(surface,ground,x,z,floor,dx,dz){
+function surfaceGrade(surface,ground,x,z,floor,dx,dz,lie){
     const sample=.045;
-    const ahead=surface(x+dx*sample,z+dz*sample)==='surround';
-    const behind=surface(x-dx*sample,z-dz*sample)==='surround';
+    const ahead=surface(x+dx*sample,z+dz*sample)===lie;
+    const behind=surface(x-dx*sample,z-dz*sample)===lie;
     if(!ahead&&!behind)return 0;
     const high=ahead?ground(x+dx*sample,z+dz*sample):floor;
     const low=behind?ground(x-dx*sample,z-dz*sample):floor;
     return clamp((high-low)/(sample*(Number(ahead)+Number(behind))),-4,4);
 }
-function landOnSurround(ball,surface,ground,floor){
+function landOnGrass(ball,lie,surface,ground,floor){
     const {x,z,vx,vy,vz}=ball;
-    const gx=surroundGrade(surface,ground,x,z,floor,1,0);
-    const gz=surroundGrade(surface,ground,x,z,floor,0,1);
+    const gx=surfaceGrade(surface,ground,x,z,floor,1,0,lie);
+    const gz=surfaceGrade(surface,ground,x,z,floor,0,1,lie);
     const normalLength=Math.hypot(gx,1,gz);
     const nx=-gx/normalLength,ny=1/normalLength,nz=-gz/normalLength;
     const approach=vx*nx+vy*ny+vz*nz;
@@ -368,18 +369,19 @@ function landOnSurround(ball,surface,ground,floor){
     const spin=ball.spin||0;
     const steep=ease((impact/Math.max(.01,Math.hypot(tx,ty,tz))-.20)/.8);
     const check=steep*clamp(.42+.45*spin,0,1);
-    const surround=surfaces.surround;
-    const retained=Math.min(1,surround.forward*(ball.roll||1)*mix(.90,.49,check));
-    const rebound=impact*surround.bounce*mix(1,.76,check);
+    const material=surfaces[lie];
+    const retained=Math.min(1,material.forward*(ball.roll||1)*mix(.90,.49,check));
+    const rebound=impact*material.bounce*mix(1,.76,check);
     ball.vx=tx*retained+nx*rebound;
     ball.vz=tz*retained+nz*rebound;
     ball.vy=ty*retained+ny*rebound;
-    ball.firstLie??='surround';
+    ball.firstLie??=lie;
     ball.y=floor+ballRadius;
     ball.spin=spin*.60;
     if(rebound*normalLength<.48){ball.mode='roll';ball.vy=0;}
 }
 function land(ball,lie,surface,ground,from,floor){
+    ball.firstContact??={x:ball.x,y:floor,z:ball.z,vx:ball.vx,vy:ball.vy,vz:ball.vz};
     const material=surfaces[lie]||surfaces.rough;
     const horizontal=Math.hypot(ball.vx,ball.vz);
     const descent=clamp(-ball.vy/Math.max(.01,horizontal),0,1.5);
@@ -423,8 +425,8 @@ function land(ball,lie,surface,ground,from,floor){
             bounce=Math.min(bounce,.12);
         }
     }
-    if(lie==='surround'&&!hitBunkerLip){
-        landOnSurround(ball,surface,ground,floor);
+    if(['tee','fairway','rough','surround'].includes(lie)&&!hitBunkerLip){
+        landOnGrass(ball,lie,surface,ground,floor);
         return;
     }
     const retained=Math.min(1,forward*(ball.roll||1));
@@ -463,6 +465,28 @@ function resolveFastPutt(ball,from,pin,speed){
         ball.flag=true;
         ball.cupCooldown=.32;
     }
+}
+function obstacleContact(ball,from,obstacle){
+    const {center,radii}=obstacle;
+    const p=[(from.x-center.x)/radii.x,(from.y-center.y)/radii.y,(from.z-center.z)/radii.z];
+    const d=[(ball.x-from.x)/radii.x,(ball.y-from.y)/radii.y,(ball.z-from.z)/radii.z];
+    const a=d.reduce((sum,n)=>sum+n*n,0),b=2*d.reduce((sum,n,i)=>sum+n*p[i],0);
+    const c=p.reduce((sum,n)=>sum+n*n,0)-1,disc=b*b-4*a*c;
+    if(a<1e-12||disc<0||c<0)return;
+    const t=(-b-Math.sqrt(disc))/(2*a);
+    if(t<0||t>1)return;
+    const x=mix(from.x,ball.x,t),y=mix(from.y,ball.y,t),z=mix(from.z,ball.z,t);
+    let nx=(x-center.x)/radii.x**2,ny=(y-center.y)/radii.y**2,nz=(z-center.z)/radii.z**2;
+    const length=Math.hypot(nx,ny,nz);
+    nx/=length;ny/=length;nz/=length;
+    const velocity=ball.vx*nx+ball.vy*ny+ball.vz*nz;
+    if(velocity>=0)return;
+    const rebound=1+(obstacle.restitution??.2),drag=obstacle.retention??.55;
+    ball.vx=(ball.vx-rebound*velocity*nx)*drag;
+    ball.vy=(ball.vy-rebound*velocity*ny)*drag;
+    ball.vz=(ball.vz-rebound*velocity*nz)*drag;
+    ball.x=x+nx*.025;ball.y=y+ny*.025;ball.z=z+nz*.025;
+    ball.obstacle=obstacle.kind;
 }
 function advance(ball, course, settings, dt=stepTime){
     ball.time+=dt;
@@ -505,6 +529,7 @@ function advance(ball, course, settings, dt=stepTime){
     }
     ball.y=ball.mode==='air'?ball.y+ball.vy*dt:rollingGround(ball.x,ball.z)+ballRadius;
 
+    for(const obstacle of course.obstacles??[])obstacleContact(ball,from,obstacle);
     const wallArea=course.wallBounds;
     if(wall.length>1&&(!wallArea||Math.min(from.y,ball.y)<wallArea.top&&
         Math.max(from.x,ball.x)>=wallArea.minX&&Math.min(from.x,ball.x)<=wallArea.maxX&&
@@ -874,6 +899,164 @@ function atlas(){
     ctx.restore();
     return canvas;
 }
+// Begin shared controls.
+
+function dragPower(depth,putting){
+    return putting?depth:depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58;
+}
+function dragHeading(start,base,dx){
+    const width=Math.abs(dx);
+    const turn=clamp(-Math.sign(dx)*(.00025*width+.000014*Math.max(0,width-16)**2),-.48,.48);
+    return base+Math.round((start-base+turn)/aimStep)*aimStep;
+}
+function shotCamera(ball,ground,heading,putting,following){
+    const dx=Math.cos(heading),dz=Math.sin(heading),back=following?5.7:putting?1.8:2.5;
+    const x=ball.x-dx*back,z=ball.z-dz*back;
+    const y=following?Math.max(ground(x,z)+2.2,ball.y-1.2):ground(ball.x,ball.z)+(putting?1.2:1.62);
+    const look=following?6:putting?5.5:14;
+    return {eye:[x,y,z],target:[ball.x+dx*look,following?ball.y-.05:ground(ball.x,ball.z)-(putting?1.68:2.30),ball.z+dz*look]};
+}
+
+// Screen-space line and handle share one projected shot bearing.
+function pullGuideGeometry(anchor,bearing,depth,width,height,distance){
+    const vx=bearing.x-anchor.x,vy=bearing.y-anchor.y,span=Math.hypot(vx,vy);
+    if(span<.01)return null;
+    const dx=vx/span,dy=vy/span,angle=Math.atan2(dy,dx);
+    const room=(dx,dy,inset)=>Math.max(0,Math.min(
+        dx>0?(width-inset-anchor.x)/dx:dx<0?(inset-anchor.x)/dx:Infinity,
+        dy>0?(height-inset-anchor.y)/dy:dy<0?(inset-anchor.y)/dy:Infinity));
+    return {dx,dy,angle,forward:Math.min(span*Math.min(1,distance),room(dx,dy,10)),
+        back:Math.min(54*depth,room(-dx,-dy,18))};
+}
+// End shared controls.
+// Begin shared visuals.
+
+// Canonical Hole 6 ball, cup, flag, putting grid and flyover green read.
+function createVisuals({gl,uniform,draw,buffer,mobile,ground,surface,greenBounds}){
+    function triangle(mesh,a,b,c,color){
+        for(const p of [a,b,c])mesh.push(...p,...color);
+    }
+    function quad(mesh,a,b,c,d,color){
+        triangle(mesh,a,b,c,color);triangle(mesh,a,c,d,color);
+    }
+    function disk(mesh,x,y,z,r,shade){
+        for(let i=0;i<24;i++){
+            const a=i*Math.PI/12,b=(i+1)*Math.PI/12;
+            triangle(mesh,[x,y,z],[x+Math.cos(a)*r,y,z+Math.sin(a)*r],[x+Math.cos(b)*r,y,z+Math.sin(b)*r],shade);
+        }
+    }
+    function ellipsoid(mesh,x,y,z,rx,ry,rz,shade,slices=12,rings=7){
+        const p=(i,j)=>{
+            const a=i*2*Math.PI/slices,b=(j/rings-.5)*Math.PI;
+            return [x+Math.cos(a)*Math.cos(b)*rx,y+Math.sin(b)*ry,z+Math.sin(a)*Math.cos(b)*rz];
+        };
+        for(let j=0;j<rings;j++)for(let i=0;i<slices;i++){
+            const light=.78+.17*Math.cos(i*2*Math.PI/slices)+j/rings*.17;
+            quad(mesh,p(i,j),p(i+1,j),p(i+1,j+1),p(i,j+1),shade.map(x=>x*light));
+        }
+    }
+    function post(mesh,x,z,bottom,height,width,shade){
+        quad(mesh,[x-width,bottom,z],[x+width,bottom,z],[x+width,bottom+height,z],[x-width,bottom+height,z],shade);
+        quad(mesh,[x,bottom,z-width],[x,bottom,z+width],[x,bottom+height,z+width],[x,bottom+height,z-width],shade);
+    }
+    function greenLine(mesh,x,z,dx,dz,halfWidth,height,shade){
+        const size=Math.hypot(dx,dz),sideX=-dz/size*halfWidth,sideZ=dx/size*halfWidth;
+        const point=(t,side)=>{
+            const px=x+t*dx+side*sideX,pz=z+t*dz+side*sideZ;
+            return [px,ground(px,pz)+height,pz];
+        };
+        quad(mesh,point(0,-1),point(0,1),point(1,1),point(1,-1),shade);
+    }
+    function makePuttingGrid(){
+        const {minX,maxX,minZ,maxZ}=greenBounds;
+        const spacing=.5,cells=4,mesh=[],streams=[],sample=.07;
+        const x0=Math.floor(minX/spacing);
+        const x1=Math.ceil(maxX/spacing);
+        const z0=Math.floor(minZ/spacing);
+        const z1=Math.ceil(maxZ/spacing);
+        const onGreen=(x,z)=>surface(x,z)==='green';
+        const lineColor=[.50,.64,.35];
+        for(let i=x0;i<=x1;i++)for(let j=z0;j<=z1;j++){
+            const row=i%cells===0,col=j%cells===0;
+            if(!row&&!col)continue;
+            const x=i*spacing,z=j*spacing;
+            if(!onGreen(x,z))continue;
+            if(col&&onGreen(x+spacing,z))greenLine(mesh,x,z,spacing,0,.018,.018,lineColor);
+            if(row&&onGreen(x,z+spacing))greenLine(mesh,x,z,0,spacing,.018,.018,lineColor);
+            if(!row||!col)continue;
+            const gx=(ground(x+sample,z)-ground(x-sample,z))/(2*sample);
+            const gz=(ground(x,z+sample)-ground(x,z-sample))/(2*sample);
+            const grade=Math.hypot(gx,gz);
+            if(grade<.0015)continue;
+            const dx=-gx/grade,dz=-gz/grade;
+            if(onGreen(x-dx*.6,z-dz*.6)&&onGreen(x+dx*.6,z+dz*.6)){
+                const preview=i%(cells*2)===0&&j%(cells*2)===0&&
+                    onGreen(x-dx*.9,z-dz*.9)&&onGreen(x+dx*.9,z+dz*.9);
+                streams.push({x,z,dx,dz,preview,period:mix(54,19,clamp(grade/.06,0,1)),phase:(i*17+j*11)%37/37});
+            }
+        }
+        return {mesh:buffer(mesh),streams};
+    }
+    function drawGreenRead(tick,opacity){
+        const arrows=[];
+        puttingGrid??=makePuttingGrid();
+        for(const {x,z,dx,dz,preview,period,phase} of puttingGrid.streams){
+            if(!preview)continue;
+            const t=(tick/period+phase)%1,span=(t-.5)*.9;
+            const ax=x+span*dx,az=z+span*dz;
+            const light=Math.sin(Math.PI*t);
+            const shade=[mix(.65,1,light),mix(.71,.92,light),mix(.38,.65,light)];
+            for(const side of [-1,1]){
+                const wingX=-dx*.42-dz*.25*side,wingZ=-dz*.42+dx*.25*side;
+                greenLine(arrows,ax,az,wingX,wingZ,.055,.08,shade);
+            }
+        }
+        gl.enable(gl.BLEND);
+        gl.uniform1f(uniform.opacity,opacity);
+        gl.bindBuffer(gl.ARRAY_BUFFER,mobile());
+        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arrows),gl.DYNAMIC_DRAW);
+        draw({handle:mobile(),count:arrows.length/6},0);
+        gl.uniform1f(uniform.opacity,1);
+        gl.disable(gl.BLEND);
+    }
+    let puttingGrid;
+    function drawFrame({pin,ball,aim,trail=[],flying=false,gridTick=null,readOpacity=null}){
+        const moving=[],base=ground(pin.x,pin.z);
+        if(gridTick!==null&&readOpacity===null){
+            puttingGrid??=makePuttingGrid();
+            draw(puttingGrid.mesh,0);
+            for(const {x,z,dx,dz,period,phase} of puttingGrid.streams){
+                const t=(gridTick/period+phase)%1;
+                const span=(t-.5)*1.03,light=Math.sin(Math.PI*t);
+                const shade=[mix(.54,.98,light),mix(.67,1,light),mix(.37,.76,light)];
+                greenLine(moving,x+span*dx,z+span*dz,dx*.13,dz*.13,.025,.026,shade);
+            }
+        }
+        disk(moving,pin.x,base+.012,pin.z,cupRadius,[.09,.13,.08]);
+        post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
+        triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
+        if(aim)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
+        if(ball.mode!=='holed'){
+            const size=flying?.076:ball.mode==='drop'?ballRadius:.046;
+            const y=ball.y+(ball.mode==='rest'?.023:0);
+            ellipsoid(moving,ball.x,y,ball.z,size,size,size,[1,1,.98],10,5);
+            if(ball.mode==='rest'||ball.mode==='roll'||ball.mode==='air'){
+                const flat=ground(ball.x,ball.z);
+                if(surface(ball.x,ball.z)!=='water')disk(moving,ball.x,flat+.012,ball.z,.063,[.35,.48,.25]);
+            }
+        }
+        for(let i=1;i<trail.length;i++){
+            const a=trail[i-1],b=trail[i],w=.023;
+            quad(moving,[a.x,a.y-w,a.z],[a.x,a.y+w,a.z],[b.x,b.y+w,b.z],[b.x,b.y-w,b.z],[.98,.87,.52]);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER,mobile());
+        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(moving),gl.DYNAMIC_DRAW);
+        draw({handle:mobile(),count:moving.length/6},0);
+        if(readOpacity>0)drawGreenRead(gridTick,readOpacity);
+    }
+    return {triangle,quad,disk,ellipsoid,post,drawFrame};
+}
+// End shared visuals.
 function makeRenderer(canvas,map){
     const gl=canvas.getContext('webgl',{antialias:true,alpha:false});
     if(!gl)throw Error('This browser could not start WebGL. Enable graphics acceleration and reload.');
@@ -929,32 +1112,11 @@ function makeRenderer(canvas,map){
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     const white=[1,1,1];
-    function triangle(mesh,a,b,c,color){
-        for(const p of [a,b,c])mesh.push(...p,...color);
-    }
-    function quad(mesh,a,b,c,d,color){
-        triangle(mesh,a,b,c,color);triangle(mesh,a,c,d,color);
-    }
-    function disk(mesh,x,y,z,r,shade){
-        for(let i=0;i<24;i++){
-            const a=i*Math.PI/12,b=(i+1)*Math.PI/12;
-            triangle(mesh,[x,y,z],[x+Math.cos(a)*r,y,z+Math.sin(a)*r],[x+Math.cos(b)*r,y,z+Math.sin(b)*r],shade);
-        }
-    }
-    function ellipsoid(mesh,x,y,z,rx,ry,rz,shade,slices=12,rings=7){
-        const p=(i,j)=>{
-            const a=i*2*Math.PI/slices,b=(j/rings-.5)*Math.PI;
-            return [x+Math.cos(a)*Math.cos(b)*rx,y+Math.sin(b)*ry,z+Math.sin(a)*Math.cos(b)*rz];
-        };
-        for(let j=0;j<rings;j++)for(let i=0;i<slices;i++){
-            const light=.78+.17*Math.cos(i*2*Math.PI/slices)+j/rings*.17;
-            quad(mesh,p(i,j),p(i+1,j),p(i+1,j+1),p(i,j+1),shade.map(x=>x*light));
-        }
-    }
-    function post(mesh,x,z,bottom,height,width,shade){
-        quad(mesh,[x-width,bottom,z],[x+width,bottom,z],[x+width,bottom+height,z],[x-width,bottom+height,z],shade);
-        quad(mesh,[x,bottom,z-width],[x,bottom,z+width],[x,bottom+height,z+width],[x,bottom+height,z-width],shade);
-    }
+    const {front,back,width:greenWidth}=greenComplex.frame,pad=greenWidth*scale/2;
+    const visuals=createVisuals({gl,uniform,draw,buffer,mobile:()=>mobile,ground,surface,
+        greenBounds:{minX:Math.min(front[0],back[0])*scale-pad,maxX:Math.max(front[0],back[0])*scale+pad,
+            minZ:Math.min(front[1],back[1])*scale-pad,maxZ:Math.max(front[1],back[1])*scale+pad}});
+    const {triangle,quad,disk,ellipsoid,post}=visuals;
     function buffer(mesh){
         const handle=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,handle);
@@ -1115,67 +1277,6 @@ function makeRenderer(canvas,map){
     const normalize=v=>{const length=Math.hypot(...v);return v.map(n=>n/length);};
     const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const dot=(a,b)=>a.reduce((sum,n,i)=>sum+n*b[i],0);
-    function greenLine(mesh,x,z,dx,dz,halfWidth,height,shade){
-        const size=Math.hypot(dx,dz),sideX=-dz/size*halfWidth,sideZ=dx/size*halfWidth;
-        const point=(t,side)=>{
-            const px=x+t*dx+side*sideX,pz=z+t*dz+side*sideZ;
-            return [px,ground(px,pz)+height,pz];
-        };
-        quad(mesh,point(0,-1),point(0,1),point(1,1),point(1,-1),shade);
-    }
-    function makePuttingGrid(){
-        const {front,back,width}=greenComplex.frame,pad=width*scale/2;
-        const spacing=.5,cells=4,mesh=[],streams=[],sample=.07;
-        const x0=Math.floor((Math.min(front[0],back[0])*scale-pad)/spacing);
-        const x1=Math.ceil((Math.max(front[0],back[0])*scale+pad)/spacing);
-        const z0=Math.floor((Math.min(front[1],back[1])*scale-pad)/spacing);
-        const z1=Math.ceil((Math.max(front[1],back[1])*scale+pad)/spacing);
-        const onGreen=(x,z)=>surface(x,z)==='green';
-        const lineColor=[.50,.64,.35];
-        for(let i=x0;i<=x1;i++)for(let j=z0;j<=z1;j++){
-            const row=i%cells===0,col=j%cells===0;
-            if(!row&&!col)continue;
-            const x=i*spacing,z=j*spacing;
-            if(!onGreen(x,z))continue;
-            if(col&&onGreen(x+spacing,z))greenLine(mesh,x,z,spacing,0,.018,.018,lineColor);
-            if(row&&onGreen(x,z+spacing))greenLine(mesh,x,z,0,spacing,.018,.018,lineColor);
-            if(!row||!col)continue;
-            const gx=(ground(x+sample,z)-ground(x-sample,z))/(2*sample);
-            const gz=(ground(x,z+sample)-ground(x,z-sample))/(2*sample);
-            const grade=Math.hypot(gx,gz);
-            if(grade<.0015)continue;
-            const dx=-gx/grade,dz=-gz/grade;
-            if(onGreen(x-dx*.6,z-dz*.6)&&onGreen(x+dx*.6,z+dz*.6)){
-                const preview=i%(cells*2)===0&&j%(cells*2)===0&&
-                    onGreen(x-dx*.9,z-dz*.9)&&onGreen(x+dx*.9,z+dz*.9);
-                streams.push({x,z,dx,dz,preview,period:mix(54,19,clamp(grade/.06,0,1)),phase:(i*17+j*11)%37/37});
-            }
-        }
-        return {mesh:buffer(mesh),streams};
-    }
-    function drawGreenRead(tick,opacity){
-        const arrows=[];
-        puttingGrid??=makePuttingGrid();
-        for(const {x,z,dx,dz,preview,period,phase} of puttingGrid.streams){
-            if(!preview)continue;
-            const t=(tick/period+phase)%1,span=(t-.5)*.9;
-            const ax=x+span*dx,az=z+span*dz;
-            const light=Math.sin(Math.PI*t);
-            const shade=[mix(.65,1,light),mix(.71,.92,light),mix(.38,.65,light)];
-            for(const side of [-1,1]){
-                const wingX=-dx*.42-dz*.25*side,wingZ=-dz*.42+dx*.25*side;
-                greenLine(arrows,ax,az,wingX,wingZ,.055,.08,shade);
-            }
-        }
-        gl.enable(gl.BLEND);
-        gl.uniform1f(uniform.opacity,opacity);
-        gl.bindBuffer(gl.ARRAY_BUFFER,mobile);
-        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arrows),gl.DYNAMIC_DRAW);
-        draw({handle:mobile,count:arrows.length/6},0);
-        gl.uniform1f(uniform.opacity,1);
-        gl.disable(gl.BLEND);
-    }
-    let puttingGrid;
     let camera,lastStatic;
     function frame(eye,target,pin,ball,aim,trail,heading,flying,gridTick=null,readOpacity=null){
         const ratio=Math.min(devicePixelRatio||1,1.6);
@@ -1197,38 +1298,7 @@ function makeRenderer(canvas,map){
         gl.clearColor(.58,.76,.83,1);
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
         draw(groundBuffer,1);draw(bankBuffer,4);draw(waterBuffer,2);draw(shorelineBuffer,3);draw(solidBuffer,0);
-        const moving=[],base=ground(pin.x,pin.z);
-        if(gridTick!==null&&readOpacity===null){
-            puttingGrid??=makePuttingGrid();
-            draw(puttingGrid.mesh,0);
-            for(const {x,z,dx,dz,period,phase} of puttingGrid.streams){
-                const t=(gridTick/period+phase)%1;
-                const span=(t-.5)*1.03,light=Math.sin(Math.PI*t);
-                const shade=[mix(.54,.98,light),mix(.67,1,light),mix(.37,.76,light)];
-                greenLine(moving,x+span*dx,z+span*dz,dx*.13,dz*.13,.025,.026,shade);
-            }
-        }
-        disk(moving,pin.x,base+.012,pin.z,cupRadius,[.09,.13,.08]);
-        post(moving,pin.x,pin.z,base,1.95,.018,[.97,.95,.83]);
-        triangle(moving,[pin.x,base+1.94,pin.z],[pin.x,base+1.45,pin.z],[pin.x,base+1.69,pin.z+.63],[.94,.45,.28]);
-        if(aim)disk(moving,aim.x,aim.y+.035,aim.z,aim.near?.095:.20,[.95,.79,.41]);
-        if(ball.mode!=='holed'){
-            const size=flying?.076:ball.mode==='drop'?ballRadius:.046;
-            const y=ball.y+(ball.mode==='rest'?.023:0);
-            ellipsoid(moving,ball.x,y,ball.z,size,size,size,[1,1,.98],10,5);
-            if(ball.mode==='rest'||ball.mode==='roll'||ball.mode==='air'){
-                const flat=ground(ball.x,ball.z);
-                if(surface(ball.x,ball.z)!=='water')disk(moving,ball.x,flat+.012,ball.z,.063,[.35,.48,.25]);
-            }
-        }
-        for(let i=1;i<trail.length;i++){
-            const a=trail[i-1],b=trail[i],w=.023;
-            quad(moving,[a.x,a.y-w,a.z],[a.x,a.y+w,a.z],[b.x,b.y+w,b.z],[b.x,b.y-w,b.z],[.98,.87,.52]);
-        }
-        gl.bindBuffer(gl.ARRAY_BUFFER,mobile);
-        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(moving),gl.DYNAMIC_DRAW);
-        draw({handle:mobile,count:moving.length/6},0);
-        if(readOpacity>0)drawGreenRead(gridTick,readOpacity);
+        visuals.drawFrame({pin,ball,aim,trail,flying,gridTick,readOpacity});
     }
     function project(x,y,z){
         if(!camera)return null;
@@ -1546,19 +1616,15 @@ function previewDrag(event){
     const dx=event.clientX-drag.x;
     let turn;
     if(drag.kind==='shot'){
-        // A broad pull gives more turn while the first few pixels allow fine aim.
-        const width=Math.abs(dx);
-        turn=-Math.sign(dx)*(.00025*width+.000014*Math.max(0,width-16)**2);
-        turn=clamp(turn,-.48,.48);
         const depth=clamp((event.clientY-drag.y)/drag.travel,0,1);
         drag.depth=depth;
         // Give high-power shots more physical travel for precise distance control.
-        setPower($('club').value==='Putter'?depth:depth<=.42?.8*depth/.42:.8+.2*(depth-.42)/.58,false);
+        setPower(dragPower(depth,$('club').value==='Putter'),false);
     }else{
         turn=dx*($('club').value==='Putter'?.0018:.001);
     }
     const base=angleTo(ball,settings.pin);
-    heading=base+quantize(drag.aim-base+turn,aimStep);
+    heading=drag.kind==='shot'?dragHeading(drag.aim,base,dx):base+quantize(drag.aim-base+turn,aimStep);
 }
 canvas.addEventListener('pointermove',event=>{
     if(drag?.id!==event.pointerId)return;
@@ -1694,11 +1760,6 @@ function showMarker(element,point){
     element.hidden=!point||point.x<6||point.x>canvas.clientWidth-6||point.y<6||point.y>canvas.clientHeight-6;
     if(!element.hidden){element.style.left=point.x+'px';element.style.top=point.y+'px';}
 }
-function roomOnRay(anchor,dx,dy,inset){
-    const horizontal=dx>0?(canvas.clientWidth-inset-anchor.x)/dx:dx<0?(inset-anchor.x)/dx:Infinity;
-    const vertical=dy>0?(canvas.clientHeight-inset-anchor.y)/dy:dy<0?(inset-anchor.y)/dy:Infinity;
-    return Math.max(0,Math.min(horizontal,vertical));
-}
 function positionGuide(element,x,y,length,angle){
     element.style.left=x+'px';
     element.style.top=y+'px';
@@ -1711,11 +1772,9 @@ function drawPullGuide(anchor,near){
     const bearing=renderer.project(ball.x+Math.cos(heading)*Math.max(1,distance),
         ball.y+.022,ball.z+Math.sin(heading)*Math.max(1,distance));
     if(ballMarker.hidden||!bearing){pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;return;}
-    const vx=bearing.x-anchor.x,vy=bearing.y-anchor.y,span=Math.hypot(vx,vy);
-    if(span<.01){pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;return;}
-    const dx=vx/span,dy=vy/span,angle=Math.atan2(dy,dx);
-    const forward=Math.min(span*Math.min(1,distance),roomOnRay(anchor,dx,dy,10));
-    const back=Math.min(54*drag.depth,roomOnRay(anchor,-dx,-dy,18));
+    const guide=pullGuideGeometry(anchor,bearing,drag.depth,canvas.clientWidth,canvas.clientHeight,distance);
+    if(!guide){pullHandle.hidden=pullTether.hidden=pullAim.hidden=true;return;}
+    const {dx,dy,angle,forward,back}=guide;
     pullAim.hidden=forward<13;
     if(!pullAim.hidden)positionGuide(pullAim,anchor.x+dx*10,anchor.y+dy*10,forward-10,angle);
     pullHandle.hidden=back<6;
@@ -1805,16 +1864,13 @@ function frame(now){
     const following=active()&&now-shotStarted>300&&ball.mode!=='drop';
     const pulling=drag?.kind==='shot';
     const h=active()?shotHeading:pulling?drag.aim:heading;
-    const forwardX=Math.cos(h),forwardZ=Math.sin(h),near=$('club').value==='Putter';
-    const back=following?5.7:near?1.8:2.5;
-    const ex=ball.x-forwardX*back,ez=ball.z-forwardZ*back;
-    const ey=following?Math.max(ground(ex,ez)+2.2,ball.y-1.2):ground(ball.x,ball.z)+(near?1.2:1.62);
+    const near=$('club').value==='Putter';
     const aimDist=near?clamp(flatDistance(ball,settings.pin),.4,12):Math.max(18,flatDistance(ball,settings.pin));
     const aimX=clamp(ball.x+Math.cos(heading)*aimDist,0,courseWidth),aimZ=clamp(ball.z+Math.sin(heading)*aimDist,0,courseDepth);
-    const desiredEye=[ex,ey,ez];
+    const sharedCamera=shotCamera(ball,ground,h,near,following);
+    const desiredEye=sharedCamera.eye;
     // Keep enough ground below the ready ball for the pullback handle on short screens.
-    const desiredTarget=following?[ball.x+forwardX*6,ball.y-.05,ball.z+forwardZ*6]:
-        [ball.x+forwardX*(near?5.5:14),ground(ball.x,ball.z)-(near?1.68:2.30),ball.z+forwardZ*(near?5.5:14)];
+    const desiredTarget=sharedCamera.target;
     const smooth=following?1-Math.exp(-dt*9):1;
     eye=eye?eye.map((n,i)=>mix(n,desiredEye[i],smooth)):desiredEye;
     target=target?target.map((n,i)=>mix(n,desiredTarget[i],smooth)):desiredTarget;
