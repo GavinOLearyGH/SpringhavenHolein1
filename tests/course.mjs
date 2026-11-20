@@ -44,4 +44,4 @@ while(['air','roll','drop'].includes(bad.state.ball.mode))bad.step();
 assert.equal(bad.state.penalties,1);
 assert.equal(bad.state.strokes,2);
 assert.equal(bad.state.ball.x,course.tees[0].x);
-console.log('540 Hole 6 replay comparisons passed. Four tee distances, driver, 14-club bag, multi-shot round, cup capture and OB penalty passed.');
+console.log('180 Hole 6 replay comparisons passed. Four tee distances, driver, 14-club bag, multi-shot round, cup capture and OB penalty passed.');
