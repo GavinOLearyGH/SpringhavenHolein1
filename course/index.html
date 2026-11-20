@@ -8,6 +8,8 @@
 <p class="build-line" id="build-version"></p></main>
 <script type="module">
 import {buildId} from '../core/build-info.mjs';
+import {refreshParentWorker} from '../core/updates.mjs';
+refreshParentWorker();
 document.getElementById('build-version').textContent='Build '+buildId;
 import {courseCatalog} from './catalog.mjs';
 import {surfaceColors} from '../core/renderer.mjs';
