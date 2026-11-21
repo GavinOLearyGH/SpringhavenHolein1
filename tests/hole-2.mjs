@@ -5,7 +5,7 @@ import {strike,ballRadius} from '../core/physics.mjs';
 import {hole2} from '../course/holes/hole-2.mjs';
 import {courseCatalog} from '../course/catalog.mjs';
 const course=createCourse(hole2),k=hole2.plan.metresPerUnit,pin=course.pins[0];
-assert.deepEqual(courseCatalog.map(hole=>hole.number),[1,2]);
+assert.deepEqual(courseCatalog.map(hole=>hole.number),[1,2,3]);
 for(const tee of course.tees){
     assert.equal(course.surface(tee.x,tee.z),'tee');
     assert.ok(Math.abs(Math.hypot(pin.x-tee.x,pin.z-tee.z)/.9144-tee.yards)<1e-8);
