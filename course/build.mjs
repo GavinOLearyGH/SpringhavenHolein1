@@ -16,7 +16,7 @@ async function files(directory){
 // Old release directories remain deployed so cached HTML cannot mix engines.
 export async function buildCourseAssets(output){
     const destination=fileURLToPath(output),sources=[];
-    for(const directory of ['core','course'])for(const file of await files(path.join(root,directory))){
+    for(const directory of ['core','course','daily'])for(const file of await files(path.join(root,directory))){
         const relative=path.relative(root,file).split(path.sep).join('/');
         if(relative==='core/build-info.mjs'||! /\.(mjs|html|css)$/.test(relative))continue;
         sources.push({relative,content:await readFile(file,'utf8')});
@@ -33,7 +33,7 @@ export async function buildCourseAssets(output){
         const target=path.join(destination,releasePath,source.relative);
         await mkdir(path.dirname(target),{recursive:true});await writeFile(target,source.content);
     }
-    for(const source of sources.filter(s=>s.relative.endsWith('.html'))){
+    for(const source of sources.filter(s=>s.relative.startsWith('course/')&&s.relative.endsWith('.html'))){
         const from=path.posix.dirname(source.relative);
         const asset=specifier=>{
             const target=path.posix.normalize(path.posix.join(from,specifier));
@@ -47,6 +47,11 @@ export async function buildCourseAssets(output){
             (_,before,url,after)=>before+asset(url)+after);
         html=html.replace('<head>','<head><meta name="course-build" content="'+buildId+'">');
         await writeFile(path.join(destination,source.relative),html);
+    }
+    for(const source of sources.filter(s=>s.relative.startsWith('course/')&&s.relative.endsWith('.html'))){
+        const target=path.join(destination,releasePath,source.relative);
+        await mkdir(path.dirname(target),{recursive:true});
+        await writeFile(target,source.content.replace('<head>','<head><meta name="course-build" content="'+buildId+'">'));
     }
     await writeFile(path.join(destination,'course/release.json'),JSON.stringify({buildId})+'\n');
     return buildId;

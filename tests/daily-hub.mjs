@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {dayKey,newCompetition} from '../core/competition.mjs';
+import {buildId} from '../core/build-info.mjs';
+const html=readFileSync(new URL('../daily/index.html',import.meta.url),'utf8');
+const nodes=new Map();function element(){return {hidden:false,style:{},children:[],setAttribute(key,value){this[key]=value;},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},scrollIntoView(){}};}
+for(const [,id] of html.matchAll(/id="([^"]+)"/g))nodes.set(id,element());
+const store=new Map(),today=dayKey();
+const session={...newCompetition(today,buildId,'a'.repeat(32)),hole:3,status:'completed',results:[{hole:1,strokes:4},{hole:2,strokes:5},{hole:3,strokes:3}],tieValid:true,tieMM:1000,name:'Three Player'};
+store.set('irish-par-three:'+today,JSON.stringify(session));store.set('irish-par-official:'+today,JSON.stringify({outcome:'in-play',name:'Ace Player',ace:true,mm:0}));
+globalThis.localStorage={getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,value)};
+globalThis.sessionStorage={setItem:(key,value)=>store.set(key,value)};
+globalThis.document={getElementById:id=>nodes.get(id),createElement:element};globalThis.window={addEventListener(){}};
+globalThis.setInterval=()=>0;
+globalThis.location={href:'https://test.github.io/daily-challenge/',search:'',hostname:'test.github.io',protocol:'https:'};
+const original=new URL('../daily/home.mjs',import.meta.url),source=readFileSync(original,'utf8').replace(/from ['"]([^'"]+)['"]/g,(_,url)=>'from '+JSON.stringify(new URL(url,original).href));
+await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+assert.equal(nodes.get('ace-leader').textContent,'Ace Player');assert.equal(nodes.get('three-leader').textContent,'Three Player');
+assert.ok(nodes.get('streak').textContent.startsWith('1-day'),'Both challenges on one day only count once');
+assert.equal(nodes.get('play-three').textContent,'Review official round');
+nodes.get('tab-three').onclick();assert.equal(nodes.get('tie-rule').hidden,false);assert.ok(nodes.get('board-rows').children[0].children[2].textContent.includes('12'));
+assert.ok(nodes.get('board-source').textContent.includes('Local preview'));
+await nodes.get('play-three').onclick();assert.ok(location.href.includes('/course/releases/'+buildId+'/course/play.html?official='+today));
+console.log('Daily hub passed: unified statuses/streak, two leaderboard views, three-hole result/tiebreak, local preview labelling and pinned official-round navigation.');

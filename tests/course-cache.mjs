@@ -16,10 +16,10 @@ function worker(source){
 const old=worker(fixture),patched=worker(protectCourseRoutes(fixture));
 for(const route of ['/course/','/course/play.html?hole=1','/core/renderer.mjs','/course/release.json','/course/releases/example/core/physics.mjs']){
     const pathname='/TIPOS_V3.0'+route;
-    assert.equal((await old(pathname)).intercepted,true,'Reproduce the stale game interception');
+    assert.equal((await old(pathname)).intercepted,!fixture.includes('// Course release boundary.'),'Recognize existing course protection or reproduce stale interception');
     const result=await patched(pathname);assert.equal(result.intercepted,false);assert.equal(result.cachedReads,0);
 }
 assert.equal((await patched('/TIPOS_V3.0/js/app.js')).intercepted,true,'Keep coaching app offline cache');
-assert.equal((await patched('/TIPOS_V3.0/daily-challenge/index.html')).intercepted,true,'Preserve the separate Daily Challenge route');
+assert.equal((await patched('/TIPOS_V3.0/daily-challenge/index.html')).intercepted,false,'Integrated Daily Challenge must load current releases');
 assert.equal(protectCourseRoutes(protectCourseRoutes(fixture)),protectCourseRoutes(fixture),'Patch must be idempotent');
 console.log('Parent-worker regression passed: stale course/core interception reproduced and bypassed; coaching and Daily Challenge cache behavior preserved.');

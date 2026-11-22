@@ -1,12 +1,14 @@
 // Run the actual course controller against a small DOM/renderer adapter.
 // This checks clock/input lifecycle, not native rendering or screen geometry.
 import assert from 'node:assert/strict';
+import {newCompetition,dayKey} from '../core/competition.mjs';
+import {buildId} from '../core/build-info.mjs';
 import {readFileSync} from 'node:fs';
 const sourceURL=new URL('../course/play.mjs',import.meta.url),html=readFileSync(new URL('../course/play.html',import.meta.url),'utf8');
 const rendererURL='data:text/javascript,'+encodeURIComponent('export const makeAtlas=()=>({width:100,height:100});export const createRenderer=()=>({frame(){},project(){return {x:100,y:100}}});');
 const controller=readFileSync(sourceURL,'utf8').replace(/from ['"]([^'"]+)['"]/g,(_,url)=>'from '+JSON.stringify(url.endsWith('/renderer.mjs')?rendererURL:new URL(url,sourceURL).href));
 function surface(){const events={};return {events,addEventListener(name,fn){(events[name]??=[]).push(fn);},emit(name,event={}){for(const fn of events[name]??[])fn(event);}};}
-async function load(query,saved){
+async function load(query,saved,official,pending){
  const nodes=new Map();
  const ctx=new Proxy({},{get:(_,key)=>()=>{}});
  for(const [,id] of html.matchAll(/id="([^"]+)"/g))nodes.set(id,{...surface(),id,options:[],value:'',style:{},hidden:false,open:false,clientWidth:390,clientHeight:600,width:180,height:510,
@@ -16,15 +18,16 @@ async function load(query,saved){
  nodes.get('green-speed').value='1';nodes.get('wind-speed').value='0';
  const doc={...surface(),hidden:false,baseURI:'https://test.invalid/course/play.html',getElementById:id=>nodes.get(id),createElement:()=>({append(){}})};
  const win={...surface()};const storage=new Map(saved?[[`irish-par-series-${saved.id}`,JSON.stringify(saved)]]:[]);
- globalThis.document=doc;globalThis.window=win;globalThis.location={search:query,href:doc.baseURI+query,replace(url){this.replaced=url;},assign(){}};
+ globalThis.document=doc;globalThis.window=win;globalThis.location={search:query,href:doc.baseURI+query,hostname:'test.github.io',protocol:'https:',replace(url){this.replaced=url;},assign(){}};
  globalThis.Option=class{constructor(label,value){this.textContent=label;this.value=String(value);}};
  globalThis.sessionStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
- globalThis.localStorage={getItem:()=>null,setItem(){}};
+ const local=new Map();if(official)local.set('irish-par-three:'+official.day,JSON.stringify(official));if(pending)local.set('irish-par-three-pending:'+official.day,JSON.stringify(pending));
+ globalThis.localStorage={getItem:key=>local.get(key)??null,setItem:(key,value)=>local.set(key,value),removeItem:key=>local.delete(key)};
  globalThis.innerHeight=800;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  globalThis.fetch=async()=>({ok:false});
  const app=await import('data:text/javascript;base64,'+Buffer.from(controller+'\nexport {round,frame,startRound,weatherSetup,holeWindTick};\n//'+query).toString('base64'));
  assert.notEqual(nodes.get('status').textContent,'Course graphics could not start.');
- return {app,nodes,win,doc,storage};
+ return {app,nodes,win,doc,storage,local};
 }
 const {app,nodes,win}=await load('?hole=1&windAngle=120&mph=10&windSeed=ui');
 assert.equal(nodes.get('wind').options.length,12);assert.equal(nodes.get('wind').value,'120');
@@ -51,3 +54,27 @@ assert.equal(persisted.windStarts[3],undefined,'Resetting an earlier hole invali
 series.app.frame(1000);series.app.frame(1050);assert.ok(series.app.round.state.windTick>4321);
 series.app.startRound();assert.equal(series.app.round.state.windTick,4321,'Reset restores entry phase');
 console.log('Course controller smoke passed: 12 choices, live wind arrow, idle/charging/flight, blur/resume without catch-up, legacy URL and saved-series clock migration. Native visuals still require device testing.');
+
+const today=dayKey(),official=newCompetition(today,buildId,'a'.repeat(32));
+const active=await load('?official='+today+'&hole=1',null,official);
+assert.equal(active.nodes.get('round-settings').hidden,true);assert.equal(active.nodes.get('tee').disabled,true);
+assert.equal(active.nodes.get('reset').textContent,'Daily Challenge');
+assert.ok(active.nodes.get('series-status').textContent.includes('Official'));
+active.app.frame(1000);active.app.frame(1050);
+active.win.emit('keydown',event);active.app.frame(performance.now()+700);active.win.emit('keyup',event);
+assert.equal(active.app.round.state.strokes,1);assert.ok(active.local.get('irish-par-three-pending:'+today));
+for(let i=0;i<900;i++){active.app.frame(performance.now()+1000+i*30);await Promise.resolve();}
+const savedOfficial=JSON.parse(active.local.get('irish-par-three:'+today));
+assert.equal(savedOfficial.revision,1);assert.equal(active.local.has('irish-par-three-pending:'+today),false);
+const resumed=await load('?official='+today+'&resume=1',null,savedOfficial);
+assert.equal(resumed.app.round.state.ball.x,savedOfficial.state.ball.x);assert.equal(resumed.app.round.state.strokes,savedOfficial.state.strokes);
+const pending={id:official.id,revision:0,shot:{hole:1,club:'Driver',power:1,heading:0,position:0,releaseTick:240}};
+const recovered=await load('?official='+today+'&pending=1',null,official,pending);await Promise.resolve();await Promise.resolve();
+assert.equal(JSON.parse(recovered.local.get('irish-par-three:'+today)).revision,1);
+const completed={...savedOfficial,hole:3,status:'completed',results:[{hole:1,strokes:4,penalties:0},{hole:2,strokes:5,penalties:0},{hole:3,strokes:3,penalties:0}],tieValid:true,tieMM:1000,state:{...savedOfficial.state,complete:true}};
+const final=await load('?official='+today+'&finished=1',null,completed);
+assert.equal(final.nodes.get('complete').open,true);assert.equal(final.nodes.get('complete-title').textContent,'Official result');
+assert.equal(final.nodes.get('official-result').hidden,false);assert.ok(final.nodes.get('complete-detail').textContent.includes('12 strokes'));
+final.nodes.get('official-name').value='Test Golfer';await final.nodes.get('publish-official').onclick();
+assert.equal(JSON.parse(final.local.get('irish-par-three:'+today)).name,'Test Golfer');
+console.log('Official controller passed: daily locking, pending-shot save, settled-shot resume, interrupted-save recovery, completed result and local publication.');

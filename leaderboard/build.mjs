@@ -31,4 +31,19 @@ await Promise.all([
         html.slice(start,end)+'\nexport { dayKey, clubs, replayDailyShot };\n')
 ]);
 
-console.log('Course build: '+await buildCourseAssets(assets));
+const buildId=await buildCourseAssets(assets);
+const hub=await readFile(new URL('../daily/index.html',import.meta.url),'utf8');
+const release='course/releases/'+buildId+'/';
+await writeFile(new URL('index.html',assets),hub.replace('./daily/style.css','./'+release+'daily/style.css').replace('./daily/home.mjs','./'+release+'daily/home.mjs'));
+// Keep Hole 6's existing gameplay and API intact behind the shared front door.
+const hubBoot=`
+if(new URLSearchParams(location.search).has('hub')){
+    const params=new URLSearchParams(location.search);
+    $('back-home').onclick=$('result-home').onclick=()=>location.href='./';
+    $('result-leaderboard').onclick=()=>location.href='./?board=ace#leaderboards';
+    openGame(!params.has('practice'));
+    if(params.has('review')){const first=readOfficial(dayKey());if(first)showDailyResult(first);}
+}
+`;
+await writeFile(new URL('ace.html',assets),html.replace('</script></body>',hubBoot+'</script></body>'));
+console.log('Daily Challenge build: '+buildId);
