@@ -26,7 +26,7 @@ async function load(query,saved,official,pending){
  globalThis.localStorage={getItem:key=>local.get(key)??null,setItem:(key,value)=>local.set(key,value),removeItem:key=>local.delete(key)};
  globalThis.innerHeight=800;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  globalThis.fetch=async()=>({ok:false});
- const app=await import('data:text/javascript;base64,'+Buffer.from(controller+'\nexport {round,frame,startRound,weatherSetup,holeWindTick,tidyPracticeResult,showOfficialDialog};\n//'+query).toString('base64'));
+ const app=await import('data:text/javascript;base64,'+Buffer.from(controller+'\nexport {round,frame,startRound,weatherSetup,holeWindTick,tidyPracticeResult,showOfficialDialog,suggestClub,updateHUD};\n//'+query).toString('base64'));
  assert.notEqual(nodes.get('status').textContent,'Course graphics could not start.');
  return {app,nodes,win,doc,storage,local};
 }
@@ -119,3 +119,14 @@ const mid={...official,hole:2,results:[{hole:1,strokes:4,penalties:0}]};
 const between=await load('?official='+today+'&modal=between',null,mid);between.app.showOfficialDialog();
 assert.equal(between.nodes.get('replay').hidden,true);assert.equal(between.nodes.get('next-hole').className,'button primary');assert.equal(between.nodes.get('complete-home').textContent,'Save and exit');
 console.log('Result actions passed: posted official leaderboard priority, between-hole continue/save-and-exit and practice round replay hierarchy.');
+
+const fairwayUI=await load('?hole=2&tee=rawlins&mph=0&clubLie=1');
+const lieCourse=(await import('../core/course.mjs')).createCourse((await import('../course/holes/hole-2.mjs')).hole2);
+const driveTarget=lieCourse.aimTarget(fairwayUI.app.round.state.ball),driveBall=fairwayUI.app.round.state.ball;
+fairwayUI.app.round.hit('Driver',1,Math.atan2(driveTarget.z-driveBall.z,driveTarget.x-driveBall.x));
+for(let i=0;i<22000&&['air','roll','drop'].includes(fairwayUI.app.round.state.ball.mode);i++)fairwayUI.app.round.step();
+fairwayUI.app.suggestClub();fairwayUI.app.updateHUD();
+assert.equal(fairwayUI.nodes.get('club').value,'3 Wood');assert.equal(fairwayUI.nodes.get('club-risk').hidden,true);
+fairwayUI.nodes.get('club').value='Driver';fairwayUI.nodes.get('club').onchange();
+assert.equal(fairwayUI.nodes.get('club-risk').hidden,false);assert.ok(fairwayUI.nodes.get('club-risk').textContent.includes('off the deck'));
+console.log('Club/lie UI passed: Hole 2 fairway defaults to 3 Wood; manually choosing Driver reveals contact risk.');

@@ -8,7 +8,7 @@ import {hole2} from '../course/holes/hole-2.mjs';
 import {hole3} from '../course/holes/hole-3.mjs';
 const a=relativeWind(0,9,0),b=relativeWind(0,9,180),c=relativeWind(0,9,90);
 assert.ok(a.x>0&&b.x<0&&c.z<0);assert.ok(Math.abs(Math.hypot(a.x,a.z)-Math.hypot(c.x,c.z))<1e-9);
-assert.ok(Math.abs(executionWindow('Driver',1)-.16*.65)<1e-9);
+assert.ok(Math.abs(executionWindow('Driver',1,'teed')-.16*.65)<1e-9);
 assert.ok(executionWindow('Driver',.85)>executionWindow('Driver',1));
 const early=resolveExecution('Driver',1,-1),late=resolveExecution('Driver',1,1);
 assert.equal(early.curve,-late.curve);assert.ok(late.spin<1&&late.lift<1&&late.power<1);

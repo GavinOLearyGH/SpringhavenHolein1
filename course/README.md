@@ -95,3 +95,11 @@ The build snapshots course HTML as well as modules, allowing an unfinished offic
 Outside the existing clean-strike window, timing error now progressively amplifies start direction and airborne curvature using linear-plus-quadratic ramps. Controlled swings reduce both effects. Contact power, spin and lift retain their existing penalties; clean strikes and putts retain their existing execution. The shared execution module applies this to both daily challenges and practice. Immutable releases preserve the rules for rounds already started on an older build.
 
 `node tests/strike-dispersion.mjs` checks all 13 airborne clubs at four powers for smooth clean-zone boundaries, increasing landing dispersion, mirrored deterministic misses and controlled-swing forgiveness. It also compares the 190-yard hybrid against the former lateral response without adding a new contact power penalty.
+
+### Club suitability and teed-ball state
+
+`core/club-lie.mjs` supplies the same club/lie rules to recommendations, timing UI and shot execution. Long ground shots suggest 3 Wood, while rough/heavy/tight recovery shots suggest Hybrid or an iron. Driver remains selectable off the deck with half the fairway clean window compared with a teed shot, stronger miss dispersion, reduced clean speed/lift and a lower launch. Rough makes driver contact harder still; unsuitable 3 Wood lies also narrow its timing window. Existing rough, sand and spatial barranca profiles are composed once with suitability penalties.
+
+A serialized round flag tracks whether the ball is actually teed. Landing on tee-box grass does not grant a tee. Stroke-and-distance returning a teed shot to the original position restores re-tee eligibility. Current player and official replay both use this state. Older immutable releases retain their original mechanics.
+
+Run `node tests/club-lie.mjs` for recommendations, clean flight comparison, timing, fixed barranca profiles, penalty/re-tee and restored-state coverage; the controller smoke test also checks the Hole 2 default and manual Driver risk notice.
