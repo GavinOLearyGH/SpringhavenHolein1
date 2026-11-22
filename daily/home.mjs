@@ -8,6 +8,7 @@ let selected=new URLSearchParams(location.search).get('board')==='three'?'three'
 refreshParentWorker();
 $('today').textContent=new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'America/New_York'});
 $('build-version').textContent='Build '+buildId;
+$('practice-selection').href='./course/?build='+buildId;
 $('practice-ace').href='./course/play.html?hole=6&practiceAce='+day+'&build='+buildId;
 $('three-setup').textContent={1896:'1896 (Black)',rawlins:'Rawlins (Blue)',butler:'Butler (Silver)',dixon:'Dixon (White)'}[setup.tee]+' · '+setup.mph+' mph prevailing wind · '+({'.8':'Slow','1':'Medium','1.24':'Fast'}[setup.speed])+' greens';
 const nameOf=score=>score.ace?'Hole in one':(score.mm/304.8).toFixed(1)+' ft';
