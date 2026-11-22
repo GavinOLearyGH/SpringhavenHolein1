@@ -59,7 +59,7 @@ console.log('Course controller smoke passed: 12 choices, live wind arrow, idle/c
 const today=dayKey(),official=newCompetition(today,buildId,'a'.repeat(32));
 const active=await load('?official='+today+'&hole=1',null,official);
 assert.equal(active.nodes.get('round-settings').hidden,true);assert.equal(active.nodes.get('tee').disabled,true);
-assert.equal(active.nodes.get('reset').textContent,'Daily Challenge');
+assert.equal(active.nodes.get('reset').textContent,'Home');
 assert.ok(active.nodes.get('series-status').textContent.includes('Official'));
 active.app.frame(1000);active.app.frame(1050);
 active.win.emit('keydown',event);active.app.frame(performance.now()+700);active.win.emit('keyup',event);

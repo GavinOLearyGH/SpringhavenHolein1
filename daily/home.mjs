@@ -22,7 +22,8 @@ function localBoards(){
 }
 function personal(){
  const ace=read(aceKey(day))??read('irish-par-official:'+day),three=read(threeKey(day)),count=streak(day);
- $('streak').textContent=count?count+'-day streak · Complete either challenge to keep it going.':'Start your streak · Complete either daily challenge.';
+ const playedToday=Boolean(read('irish-par-official:'+day)||ace?.status==='completed'||three?.status==='completed');
+ $('streak').textContent=playedToday?count+'-day streak · You’ve played today.':count?count+'-day streak · Complete either daily challenge to keep your streak going.':'Start your streak · Complete either daily challenge.';
  $('ace-state').textContent=ace?.status==='in-progress'?'Official shot ready · Resume today’s attempt':ace?'Official result: '+(ace.outcome==='in-play'?nameOf(ace):ace.outcome==='water'?'Water · Streak kept':'Out of play · Streak kept'):'Not played today';
  $('play-ace').textContent=ace?.status==='in-progress'?'Resume official shot':ace?'Review today’s result':'Play Hole-in-One';$('play-ace').href='./course/play.html?hole=6&ace='+day+'&build='+buildId;
  $('three-state').textContent=three?.status==='completed'?'Official result: '+scoreOf(totalScore(three)):three?'Round in progress · Hole '+three.hole+' · '+totalScore(three)+' strokes':'Not played today';
@@ -40,7 +41,7 @@ function render(){
  let rows=board?.leaders??[];
  if(selected==='three')rows=rankedThree(rows);else{let rank=0,last;rows=rows.map((row,index)=>{if(!last||row.ace!==last.ace||row.mm!==last.mm)rank=index+1;last=row;return {...row,rank};});}
  $('board-rows').replaceChildren(...rows.map(row=>cellRow(selected==='ace'?[row.rank,row.name,nameOf(row)]:[row.rank,row.name,scoreOf(row.total),tieOf(row)])));
- $('board-empty').hidden=rows.length>0;$('board-count').textContent=(board?.total??0)+' players · First attempts';
+ $('board-empty').hidden=rows.length>0;$('board-count').textContent=(board?.total??0)+((board?.total??0)===1?' player':' players')+' · Official results';
  const bands=selected==='ace'?['Ace','Inside 3 ft','3–under 10 ft','10–under 25 ft','25 ft or more']:['Under par','Even par','+1 to +3','+4 to +6','+7 or more'];
  const counts=selected==='ace'?(board?.counts??[0,0,0,0,0]):[0,0,0,0,0];
  if(selected==='three')for(const row of board?.distribution??[])counts[row.total<12?0:row.total===12?1:row.total<=15?2:row.total<=18?3:4]+=row.count;

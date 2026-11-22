@@ -16,7 +16,7 @@ globalThis.location={href:'https://test.github.io/daily-challenge/',search:'',ho
 const original=new URL('../daily/home.mjs',import.meta.url),source=readFileSync(original,'utf8').replace(/from ['"]([^'"]+)['"]/g,(_,url)=>'from '+JSON.stringify(new URL(url,original).href));
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 assert.equal(nodes.get('ace-leader').textContent,'Ace Player');assert.equal(nodes.get('three-leader').textContent,'Three Player');
-assert.ok(nodes.get('streak').textContent.startsWith('1-day'),'Both challenges on one day only count once');
+assert.equal(nodes.get('streak').textContent,'1-day streak · You’ve played today.','Both challenges count once and confirm today is complete');
 assert.equal(nodes.get('play-three').textContent,'Review official round');
 nodes.get('tab-three').onclick();assert.equal(nodes.get('tie-rule').hidden,false);assert.ok(nodes.get('board-rows').children[0].children[2].textContent.includes('12'));
 assert.ok(nodes.get('board-source').textContent.includes('Local preview'));
