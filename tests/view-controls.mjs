@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {turnHeading,powerHeight} from '../core/view-controls.mjs';
+import {createCourse} from '../core/course.mjs';
+import {hole2} from '../course/holes/hole-2.mjs';
+const c=createCourse(hole2),k=hole2.plan.metresPerUnit;
+const point={x:1000*k-40,z:618*k-35},target=c.aimTarget(point);
+assert.equal(target.x,1510*k,'Skip the nearby first waypoint after a drive');
+assert.ok(Math.abs(Math.atan2(target.z-point.z,target.x-point.x))<.3,'Face down the fairway rather than sharply sideways');
+assert.equal(c.aimTarget({x:c.pins[0].x-20,z:c.pins[0].z}),c.pins[0]);
+assert.ok(turnHeading(0,100)<0);assert.ok(turnHeading(0,-100)>0);
+assert.ok(Math.abs(turnHeading(3,10000))<=Math.PI);
+assert.equal(powerHeight(0),0);assert.equal(powerHeight(1),100);assert.equal(powerHeight(-1),0);assert.equal(powerHeight(2),100);
+console.log('View controls passed: forward target selection, pin fallback, swipe direction/wrapping and upward power range.');
