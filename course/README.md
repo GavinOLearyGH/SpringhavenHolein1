@@ -89,3 +89,9 @@ The build snapshots course HTML as well as modules, allowing an unfinished offic
 ## One player for Hole 6 and the three-hole challenge
 
 `course/holes/hole-6.mjs` preserves the original metre-scale terrain functions, nine pin positions, tapered wall, pond seam and arched bridge meshes. `core/renderer.mjs` draws its static mesh batches through the same shader, camera, ball/cup and green-read pipeline used by every other hole. `course/play.html` is the only current player: shared overlay, full bag, power curve, strike timing, dynamic wind, aiming and results. The one-shot ACE adapter in `core/competition.mjs` calls the same `core/round.mjs` execution/physics path and finishes after the first settled shot. `ace.html` redirects into this player; the old source HTML remains solely to support legacy replay/backward compatibility and regression comparisons. Publishing rebuilds the current player and both backend replay paths; keep pinned old releases for existing three-hole attempts.
+
+### Progressive timing dispersion
+
+Outside the existing clean-strike window, timing error now progressively amplifies start direction and airborne curvature using linear-plus-quadratic ramps. Controlled swings reduce both effects. Contact power, spin and lift retain their existing penalties; clean strikes and putts retain their existing execution. The shared execution module applies this to both daily challenges and practice. Immutable releases preserve the rules for rounds already started on an older build.
+
+`node tests/strike-dispersion.mjs` checks all 13 airborne clubs at four powers for smooth clean-zone boundaries, increasing landing dispersion, mirrored deterministic misses and controlled-swing forgiveness. It also compares the 190-yard hybrid against the former lateral response without adding a new contact power penalty.
