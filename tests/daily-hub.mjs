@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {dayKey,newCompetition} from '../core/competition.mjs';
+import {dayKey,newCompetition,dailySetup} from '../core/competition.mjs';
 import {buildId} from '../core/build-info.mjs';
 const html=readFileSync(new URL('../daily/index.html',import.meta.url),'utf8');
 const nodes=new Map();function element(){return {hidden:false,style:{},children:[],setAttribute(key,value){this[key]=value;},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},scrollIntoView(){}};}
@@ -22,3 +22,20 @@ nodes.get('tab-three').onclick();assert.equal(nodes.get('tie-rule').hidden,false
 assert.ok(nodes.get('board-source').textContent.includes('Local preview'));
 await nodes.get('play-three').onclick();assert.ok(location.href.includes('/course/releases/'+buildId+'/course/play.html?official='+today));
 console.log('Daily hub passed: unified statuses/streak, two leaderboard views, three-hole result/tiebreak, local preview labelling and pinned official-round navigation.');
+
+assert.ok(html.includes('Choose a hole</strong>'));assert.ok(!html.includes('Practice Hole 6</a>'));
+assert.equal((html.match(/class="practice-option"/g)||[]).length,3);
+assert.ok(nodes.get('practice-ace').href.includes('practiceAce='+today));
+const officialBefore=[store.get('irish-par-three:'+today),store.get('irish-par-official:'+today)];
+nodes.get('practice-three').onclick();
+let practiceURL=new URL(location.href,'https://test.github.io/daily-challenge/');
+let practice=JSON.parse(store.get('irish-par-series-'+practiceURL.searchParams.get('series')));
+assert.deepEqual(practice.setup,dailySetup(today));assert.equal(practice.practiceDay,today);
+assert.equal(practiceURL.searchParams.has('official'),false);
+assert.deepEqual([store.get('irish-par-three:'+today),store.get('irish-par-official:'+today)],officialBefore);
+store.delete('irish-par-three:'+today);store.delete('irish-par-official:'+today);
+await import('data:text/javascript;base64,'+Buffer.from(source+'\n// practice before official attempt').toString('base64'));
+nodes.get('practice-three').onclick();
+assert.equal(store.has('irish-par-three:'+today),false);assert.equal(store.has('irish-par-ace:'+today),false);
+assert.equal(nodes.get('streak').textContent,'Start your streak · Complete either daily challenge.');
+console.log('Practice hub passed: three clear options, exact daily setup, available before/after official attempts, no official-result or streak changes.');

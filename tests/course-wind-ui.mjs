@@ -130,3 +130,11 @@ assert.equal(fairwayUI.nodes.get('club').value,'3 Wood');assert.equal(fairwayUI.
 fairwayUI.nodes.get('club').value='Driver';fairwayUI.nodes.get('club').onchange();
 assert.equal(fairwayUI.nodes.get('club-risk').hidden,false);assert.ok(fairwayUI.nodes.get('club-risk').textContent.includes('off the deck'));
 console.log('Club/lie UI passed: Hole 2 fairway defaults to 3 Wood; manually choosing Driver reveals contact risk.');
+
+assert.ok(practiceSix.nodes.get('series-status').textContent.startsWith('Practice ·'));
+const dailyPinBefore={...practiceSix.app.round.settings.pin};
+practiceSix.nodes.get('reset').onclick();
+for(const key of ['id','x','z'])assert.equal(practiceSix.app.round.settings.pin[key],dailyPinBefore[key],'Reset preserves exact daily pin, including custom cup');
+assert.equal(practiceSix.app.round.state.strokes,0);assert.equal(practiceSix.nodes.get('round-settings').hidden,true);
+assert.ok(fairwayUI.nodes.get('series-status').textContent.startsWith('Practice ·'));
+console.log('Practice player passed: clear mode label and exact daily pin restored on reset.');
