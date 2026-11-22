@@ -36,3 +36,5 @@ CREATE TABLE IF NOT EXISTS three_attempts (
     PRIMARY KEY (day,player),
     KEY three_rank (day,status,total,tie_valid,tie_mm)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ace_rounds LIKE three_attempts;

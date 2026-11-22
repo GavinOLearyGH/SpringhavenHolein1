@@ -35,15 +35,9 @@ const buildId=await buildCourseAssets(assets);
 const hub=await readFile(new URL('../daily/index.html',import.meta.url),'utf8');
 const release='course/releases/'+buildId+'/';
 await writeFile(new URL('index.html',assets),hub.replace('./daily/style.css','./'+release+'daily/style.css').replace('./daily/home.mjs','./'+release+'daily/home.mjs'));
-// Keep Hole 6's existing gameplay and API intact behind the shared front door.
-const hubBoot=`
-if(new URLSearchParams(location.search).has('hub')){
-    const params=new URLSearchParams(location.search);
-    $('back-home').onclick=$('result-home').onclick=()=>location.href='./';
-    $('result-leaderboard').onclick=()=>location.href='./?board=ace#leaderboards';
-    openGame(!params.has('practice'));
-    if(params.has('review')){const first=readOfficial(dayKey());if(first)showDailyResult(first);}
-}
-`;
-await writeFile(new URL('ace.html',assets),html.replace('</script></body>',hubBoot+'</script></body>'));
+// Compatibility URL: all current gameplay goes through the one shared player.
+await writeFile(new URL('ace.html',assets),`<!doctype html><html><head><meta charset="utf-8"><title>The Irish Par · Hole 6</title></head><body><p>Opening Hole 6…</p><script>
+const params=new URLSearchParams(location.search),target=new URL('course/play.html',location.href);
+target.searchParams.set('hole','6');target.searchParams.set(params.has('practice')?'practiceAce':'ace',new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
+location.replace(target.href);</script></body></html>`);
 console.log('Daily Challenge build: '+buildId);

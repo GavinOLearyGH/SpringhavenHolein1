@@ -1,6 +1,6 @@
 import {dailySetup,rankedThree} from '../core/competition.mjs';
 import {buildId} from '../core/build-info.mjs';
-import {dayKey,read,threeKey,startOfficial,officialURL,localOnly,appRoot,totalScore,streak} from '../core/daily-client.mjs';
+import {dayKey,read,threeKey,aceKey,startOfficial,officialURL,localOnly,appRoot,totalScore,streak} from '../core/daily-client.mjs';
 import {newSeries} from '../core/series.mjs';
 import {refreshParentWorker} from '../core/updates.mjs';
 const $=id=>document.getElementById(id),day=dayKey(),setup=dailySetup(day);
@@ -8,22 +8,22 @@ let selected=new URLSearchParams(location.search).get('board')==='three'?'three'
 refreshParentWorker();
 $('today').textContent=new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'America/New_York'});
 $('build-version').textContent='Build '+buildId;
-$('practice-ace').href='./ace.html?hub=1&practice=1&build='+buildId;
+$('practice-ace').href='./course/play.html?hole=6&practiceAce='+day+'&build='+buildId;
 $('three-setup').textContent={1896:'1896 (Black)',rawlins:'Rawlins (Blue)',butler:'Butler (Silver)',dixon:'Dixon (White)'}[setup.tee]+' · '+setup.mph+' mph prevailing wind · '+({'.8':'Slow','1':'Medium','1.24':'Fast'}[setup.speed])+' greens';
 const nameOf=score=>score.ace?'Hole in one':(score.mm/304.8).toFixed(1)+' ft';
 const tieOf=score=>score.tieValid?(score.tieMM===0?'Ace':(score.tieMM/304.8).toFixed(1)+' ft'):'Penalty';
 const scoreOf=total=>total+' ('+(total===12?'E':total>12?'+'+(total-12):total-12)+')';
 function localBoards(){
- const ace=read('irish-par-official:'+day),three=read(threeKey(day)),counts=[0,0,0,0,0];
+ const ace=read(aceKey(day))??read('irish-par-official:'+day),three=read(threeKey(day)),counts=[0,0,0,0,0];
  const aceRows=ace?.name&&ace.outcome==='in-play'?[ace]:[];for(const row of aceRows)counts[row.ace?0:row.mm<914.4?1:row.mm<3048?2:row.mm<7620?3:4]++;
  return {ace:{day,leaders:aceRows,counts,total:aceRows.length},three:{day,leaders:three?.name&&three.status==='completed'?[{name:three.name,total:totalScore(three),tieValid:three.tieValid,tieMM:three.tieMM}]:[],
   distribution:three?.name&&three.status==='completed'?[{total:totalScore(three),count:1}]:[],total:three?.name&&three.status==='completed'?1:0}};
 }
 function personal(){
- const ace=read('irish-par-official:'+day),three=read(threeKey(day)),count=streak(day);
+ const ace=read(aceKey(day))??read('irish-par-official:'+day),three=read(threeKey(day)),count=streak(day);
  $('streak').textContent=count?count+'-day streak · Complete either challenge to keep it going.':'Start your streak · Complete either daily challenge.';
- $('ace-state').textContent=ace?'Official result: '+(ace.outcome==='in-play'?nameOf(ace):ace.outcome==='water'?'Water · Streak kept':'Out of play · Streak kept'):'Not played today';
- $('play-ace').textContent=ace?'Review today’s result':'Play Hole-in-One';$('play-ace').href='./ace.html?hub=1'+(ace?'&review=1':'')+'&build='+buildId;
+ $('ace-state').textContent=ace?.status==='in-progress'?'Official shot ready · Resume today’s attempt':ace?'Official result: '+(ace.outcome==='in-play'?nameOf(ace):ace.outcome==='water'?'Water · Streak kept':'Out of play · Streak kept'):'Not played today';
+ $('play-ace').textContent=ace?.status==='in-progress'?'Resume official shot':ace?'Review today’s result':'Play Hole-in-One';$('play-ace').href='./course/play.html?hole=6&ace='+day+'&build='+buildId;
  $('three-state').textContent=three?.status==='completed'?'Official result: '+scoreOf(totalScore(three)):three?'Round in progress · Hole '+three.hole+' · '+totalScore(three)+' strokes':'Not played today';
  $('play-three').textContent=three?.status==='completed'?'Review official round':three?'Resume official round':'Play Three Holes';
 }
@@ -46,7 +46,7 @@ function render(){
  $('distribution').replaceChildren(...bands.map((label,index)=>{const row=document.createElement('div'),name=document.createElement('span'),meter=document.createElement('meter'),count=document.createElement('span');name.textContent=label;meter.max=Math.max(1,board?.total??0);meter.value=counts[index];meter.setAttribute('aria-label',label+': '+counts[index]);count.textContent=counts[index];row.append(name,meter,count);return row;}));
 }
 async function refresh(){const version=++requestNumber;boards=localBoards();render();if(localOnly())return;
- await Promise.allSettled(['ace','three'].map(async type=>{try{const response=await fetch(new URL('api/'+(type==='ace'?'leaderboard':'three'),appRoot()),{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!response.ok)throw Error();const board=await response.json();if(board.day!==day||!Array.isArray(board.leaders))throw Error();if(version===requestNumber){boards[type]=board;sources[type]='shared';render();}}catch{if(version===requestNumber){sources[type]='unavailable';$('home-status').textContent='Shared scores could not be loaded. Showing results saved on this browser.';render();}}}));}
+ await Promise.allSettled(['ace','three'].map(async type=>{try{const response=await fetch(new URL('api/'+(type==='ace'?'ace':'three'),appRoot()),{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!response.ok)throw Error();const board=await response.json();if(board.day!==day||!Array.isArray(board.leaders))throw Error();if(version===requestNumber){boards[type]=board;sources[type]='shared';render();}}catch{if(version===requestNumber){sources[type]='unavailable';$('home-status').textContent='Shared scores could not be loaded. Showing results saved on this browser.';render();}}}));}
 for(const type of ['ace','three'])$('tab-'+type).onclick=()=>{selected=type;render();};
 $('play-three').onclick=async()=>{const button=$('play-three');button.disabled=true;try{const session=await startOfficial();location.href=officialURL(session);}catch(error){$('home-status').textContent=error.message;}finally{button.disabled=false;}};
 $('practice-three').onclick=()=>{const id=String(Date.now()),series=newSeries(id,setup);try{sessionStorage.setItem('irish-par-series-'+id,JSON.stringify(series));location.href='./course/play.html?'+new URLSearchParams({hole:1,series:id,...setup,build:buildId});}catch{$('home-status').textContent='Allow browser storage to play a three-hole practice round.';}};

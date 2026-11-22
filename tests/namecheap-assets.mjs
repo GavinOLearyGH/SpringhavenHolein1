@@ -10,7 +10,7 @@ const server=require('../leaderboard/namecheap-server.js');Module._load=original
 await once(server,'listening');
 try{
  const root='http://127.0.0.1:'+server.address().port+'/DailyChallenge/';
- for(const [asset,type,contains] of [['','text/html','Three-Hole Challenge'],['ace.html','text/html','The Springhaven Club - Hole 6'],['course/play.html','text/html','wind-arrow'],['course/releases/'+buildId+'/core/competition.mjs','text/javascript','applyCompetitionShot'],['course/releases/'+buildId+'/daily/style.css','text/css','challenge-grid']]){
+ for(const [asset,type,contains] of [['','text/html','Three-Hole Challenge'],['ace.html','text/html','Opening Hole 6'],['course/play.html','text/html','wind-arrow'],['course/releases/'+buildId+'/core/competition.mjs','text/javascript','applyCompetitionShot'],['course/releases/'+buildId+'/daily/style.css','text/css','challenge-grid']]){
   const response=await fetch(root+asset);assert.equal(response.status,200,asset);assert.ok(response.headers.get('content-type').startsWith(type));assert.ok((await response.text()).includes(contains));
  }
  assert.equal((await fetch(root+'namecheap-server.js')).status,404);

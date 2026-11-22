@@ -21,7 +21,7 @@ async function load(query,saved,official,pending){
  globalThis.document=doc;globalThis.window=win;globalThis.location={search:query,href:doc.baseURI+query,hostname:'test.github.io',protocol:'https:',replace(url){this.replaced=url;},assign(){}};
  globalThis.Option=class{constructor(label,value){this.textContent=label;this.value=String(value);}};
  globalThis.sessionStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
- const local=new Map();if(official)local.set('irish-par-three:'+official.day,JSON.stringify(official));if(pending)local.set('irish-par-three-pending:'+official.day,JSON.stringify(pending));
+ const local=new Map();if(official)local.set((official.kind==='ace'?'irish-par-ace:':'irish-par-three:')+official.day,JSON.stringify(official));if(pending)local.set('irish-par-three-pending:'+official.day,JSON.stringify(pending));
  globalThis.localStorage={getItem:key=>local.get(key)??null,setItem:(key,value)=>local.set(key,value),removeItem:key=>local.delete(key)};
  globalThis.innerHeight=800;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  globalThis.fetch=async()=>({ok:false});
@@ -78,3 +78,14 @@ assert.equal(final.nodes.get('official-result').hidden,false);assert.ok(final.no
 final.nodes.get('official-name').value='Test Golfer';await final.nodes.get('publish-official').onclick();
 assert.equal(JSON.parse(final.local.get('irish-par-three:'+today)).name,'Test Golfer');
 console.log('Official controller passed: daily locking, pending-shot save, settled-shot resume, interrupted-save recovery, completed result and local publication.');
+
+const aceSession=newCompetition(today,buildId,'d'.repeat(32),'ace');
+const aceUI=await load('?ace='+today,null,aceSession);
+assert.equal(aceUI.nodes.get('hole-title').textContent,'Hole 6 · Par 3');assert.equal(aceUI.nodes.get('pin').disabled,true);
+aceUI.win.emit('keydown',event);aceUI.app.frame(performance.now()+700);aceUI.win.emit('keyup',event);
+for(let i=0;i<1200;i++){aceUI.app.frame(performance.now()+1000+i*30);await Promise.resolve();}
+const aceSaved=JSON.parse(aceUI.local.get('irish-par-ace:'+today));
+assert.equal(aceSaved.status,'completed');assert.equal(aceUI.nodes.get('complete').open,true);assert.equal(aceUI.nodes.get('complete-title').textContent,'Official result');
+assert.equal(aceUI.nodes.get('official-detail').hidden,true);assert.ok(aceUI.nodes.get('official-board').href.includes('board=ace'));
+assert.equal(aceUI.nodes.get('power-fill').style.height,'0%');assert.ok(aceUI.nodes.get('series-status').textContent.includes('Hole-in-One'));
+console.log('Unified Hole 6 controller passed: same power/strike/wind overlay, one-shot completion and ACE result/leaderboard routing.');

@@ -7,7 +7,7 @@ function engineFor(build){
  if(!engines.has(build))engines.set(build,import('./generated/public/course/releases/'+build+'/core/competition.mjs'));
  return engines.get(build);
 }
-export async function handleThree(request,store,{today=dayKey(),currentBuild=buildId,loadEngine=engineFor}={}){
+export async function handleThree(request,store,{today=dayKey(),currentBuild=buildId,loadEngine=engineFor,kind='three'}={}){
  try{
   if(request.method==='GET')return json(await store.read(today));
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
@@ -24,7 +24,7 @@ export async function handleThree(request,store,{today=dayKey(),currentBuild=bui
    if(session)return json(session);
    if(input.build!==currentBuild)return json({error:'A new game version is available. Reload the Daily Challenge page.'},409);
    const engine=await loadEngine(currentBuild);
-   session=await store.start(today,input.player,engine.newCompetition(today,currentBuild,input.id));return json(session);
+   session=await store.start(today,input.player,engine.newCompetition(today,currentBuild,input.id,kind));return json(session);
   }
   if(!session||session.id!==input.id)return json({error:'Start or resume your official round first'},409);
   if(input.action==='shot'){
@@ -38,6 +38,7 @@ export async function handleThree(request,store,{today=dayKey(),currentBuild=bui
   if(input.action==='publish'){
    const name=typeof input.name==='string'?input.name.trim().replace(/\s+/g,' '):'';
    if(!name||name.length>28||/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(name))return json({error:'Enter a display name of up to 28 characters'},400);
+   if(session.kind==='ace'&&session.outcome!=='in-play')return json({error:'Only shots finishing in play can be posted'},422);
    if(session.status!=='completed')return json({error:'Complete all three holes before posting'},409);
    return json(await store.publish(today,input.player,name));
   }
