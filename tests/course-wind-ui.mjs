@@ -5,10 +5,11 @@ import {newCompetition,dayKey} from '../core/competition.mjs';
 import {buildId} from '../core/build-info.mjs';
 import {readFileSync} from 'node:fs';
 const sourceURL=new URL('../course/play.mjs',import.meta.url),html=readFileSync(new URL('../course/play.html',import.meta.url),'utf8');
-const rendererURL='data:text/javascript,'+encodeURIComponent('export const makeAtlas=()=>({width:100,height:100});export const createRenderer=()=>({frame(){},project(){return {x:100,y:100}}});');
+const rendererURL='data:text/javascript,'+encodeURIComponent('export const makeAtlas=()=>({width:100,height:100});export const createRenderer=()=>({frame(view){globalThis.__viewFrames.push(view);},project(){return {x:100,y:100}}});');
 const controller=readFileSync(sourceURL,'utf8').replace(/from ['"]([^'"]+)['"]/g,(_,url)=>'from '+JSON.stringify(url.endsWith('/renderer.mjs')?rendererURL:new URL(url,sourceURL).href));
 function surface(){const events={};return {events,addEventListener(name,fn){(events[name]??=[]).push(fn);},emit(name,event={}){for(const fn of events[name]??[])fn(event);}};}
 async function load(query,saved,official,pending){
+ globalThis.__viewFrames=[];
  const nodes=new Map();
  const ctx=new Proxy({},{get:(_,key)=>()=>{}});
  for(const [,id] of html.matchAll(/id="([^"]+)"/g))nodes.set(id,{...surface(),id,options:[],value:'',style:{},hidden:false,open:false,clientWidth:390,clientHeight:600,width:180,height:510,
@@ -89,3 +90,22 @@ assert.equal(aceSaved.status,'completed');assert.equal(aceUI.nodes.get('complete
 assert.equal(aceUI.nodes.get('official-detail').hidden,true);assert.ok(aceUI.nodes.get('official-board').href.includes('board=ace'));
 assert.equal(aceUI.nodes.get('power-fill').style.height,'0%');assert.ok(aceUI.nodes.get('series-status').textContent.includes('Hole-in-One'));
 console.log('Unified Hole 6 controller passed: same power/strike/wind overlay, one-shot completion and ACE result/leaderboard routing.');
+
+const practiceSix=await load('?hole=6&practiceAce=2026-11-22&regression=flyover-putt');
+assert.equal(practiceSix.nodes.get('green-speed').value,'.8');assert.equal(practiceSix.app.round.settings.greenSpeed,.8);
+practiceSix.nodes.get('flyover').onclick();assert.equal(practiceSix.nodes.get('flyover').textContent,'Skip flyover');
+for(const t of [1000,2000,5000,7500,9000,11000])practiceSix.app.frame(t);
+assert.equal(practiceSix.nodes.get('flyover').textContent,'Flyover','Flyover must finish and return to play');
+assert.notDeepEqual(globalThis.__viewFrames[0].eye,globalThis.__viewFrames[2].eye,'Camera must move during flyover');
+assert.ok(globalThis.__viewFrames.every(view=>view.eye.every(Number.isFinite)&&view.target.every(Number.isFinite)));
+
+const puttingBall=practiceSix.app.round.state.ball,pin=practiceSix.app.round.settings.pin;
+Object.assign(puttingBall,{x:pin.x-4.5,z:pin.z,y:0,mode:'rest'});
+practiceSix.nodes.get('club').value='Putter';practiceSix.nodes.get('club').onchange();
+practiceSix.win.emit('keydown',event);practiceSix.app.frame(performance.now()+700);
+assert.ok(parseFloat(practiceSix.nodes.get('putt-roll').textContent.replace('Est. ',''))>0,'Half-power putt must estimate nonzero travel');
+const startX=puttingBall.x,startZ=puttingBall.z;
+practiceSix.win.emit('keyup',event);
+for(let i=0;i<400;i++)practiceSix.app.frame(performance.now()+1000+i*30);
+assert.ok(Math.hypot(practiceSix.app.round.state.ball.x-startX,practiceSix.app.round.state.ball.z-startZ)>.1,'Putt must move after release');
+console.log('Hole 6 regressions passed: slow-speed normalization, complete animated flyover, nonzero putting estimate and released putt movement.');
