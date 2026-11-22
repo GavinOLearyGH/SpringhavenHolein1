@@ -26,7 +26,7 @@ async function load(query,saved,official,pending){
  globalThis.localStorage={getItem:key=>local.get(key)??null,setItem:(key,value)=>local.set(key,value),removeItem:key=>local.delete(key)};
  globalThis.innerHeight=800;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  globalThis.fetch=async()=>({ok:false});
- const app=await import('data:text/javascript;base64,'+Buffer.from(controller+'\nexport {round,frame,startRound,weatherSetup,holeWindTick};\n//'+query).toString('base64'));
+ const app=await import('data:text/javascript;base64,'+Buffer.from(controller+'\nexport {round,frame,startRound,weatherSetup,holeWindTick,tidyPracticeResult,showOfficialDialog};\n//'+query).toString('base64'));
  assert.notEqual(nodes.get('status').textContent,'Course graphics could not start.');
  return {app,nodes,win,doc,storage,local};
 }
@@ -109,3 +109,13 @@ practiceSix.win.emit('keyup',event);
 for(let i=0;i<400;i++)practiceSix.app.frame(performance.now()+1000+i*30);
 assert.ok(Math.hypot(practiceSix.app.round.state.ball.x-startX,practiceSix.app.round.state.ball.z-startZ)>.1,'Putt must move after release');
 console.log('Hole 6 regressions passed: slow-speed normalization, complete animated flyover, nonzero putting estimate and released putt movement.');
+
+assert.equal(final.nodes.get('official-name-label').hidden,true,'Published result hides redundant name entry');
+assert.equal(final.nodes.get('publish-official').hidden,true);assert.equal(final.nodes.get('official-board').className,'button primary');
+assert.ok(final.nodes.get('complete-home').href.includes('/daily-challenge/'));assert.equal(final.nodes.get('practice-home').hidden,true);
+practiceSix.app.tidyPracticeResult(true,false);assert.equal(practiceSix.nodes.get('next-hole').className,'button primary');
+practiceSix.app.tidyPracticeResult(false,true);assert.equal(practiceSix.nodes.get('replay').hidden,true);assert.equal(practiceSix.nodes.get('series-replay').className,'primary');
+const mid={...official,hole:2,results:[{hole:1,strokes:4,penalties:0}]};
+const between=await load('?official='+today+'&modal=between',null,mid);between.app.showOfficialDialog();
+assert.equal(between.nodes.get('replay').hidden,true);assert.equal(between.nodes.get('next-hole').className,'button primary');assert.equal(between.nodes.get('complete-home').textContent,'Save and exit');
+console.log('Result actions passed: posted official leaderboard priority, between-hole continue/save-and-exit and practice round replay hierarchy.');
